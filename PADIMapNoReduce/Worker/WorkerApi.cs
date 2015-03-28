@@ -4,9 +4,9 @@ using System.Text;
 
 namespace Worker
 {
-    interface WorkerApi
+    public interface WorkerApi
     {
         void registerWork(int[] splits);
-        void registerSplitData(string data);
+        void registerSplitData(string data, int splitId);
     }
 }

@@ -4,10 +4,9 @@ using System.Text;
 
 namespace Worker
 {
-    interface JobTrackerApi
+    public interface JobTrackerApi
     {
         void registerJob(string inputFilePath, int nSplits, string outputResultPath);
-
-        void hello(string src);
+        void registerWorker(string src);
     }
 }

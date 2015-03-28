@@ -12,7 +12,7 @@ namespace Worker
 
         static void Main(string[] args)
         {
-            System.Console.WriteLine("Port to register worker: ");
+            System.Console.WriteLine("Port to register worker (1000 to register JobTracker): ");
 
             string portInput = System.Console.ReadLine();
             int portInputFormatted;
@@ -23,6 +23,7 @@ namespace Worker
             }
 
             //TODO: Check for port range
+            //TODO: Catch already in use port exception
             TcpChannel channel = new TcpChannel(portInputFormatted);
             ChannelServices.RegisterChannel(channel, true);
             RemotingConfiguration.RegisterWellKnownServiceType(
@@ -33,18 +34,17 @@ namespace Worker
             if (portInputFormatted == JOB_TRACKER_PORT)
             {
                 System.Console.WriteLine("JobTracker registred");
+                Console.Title = "JobTracker - " + "tcp://localhost:" + portInputFormatted;
             }
             else
             {
+                Console.Title = "Worker - " + "tcp://localhost:" + portInputFormatted;
                 System.Console.WriteLine("Worker registred");
                 JobTrackerApi jobTracker = 
                     (JobTrackerApi) Activator.GetObject(typeof(JobTrackerApi), "tcp://localhost:" + JOB_TRACKER_PORT + "/Worker");
-                jobTracker.hello("tcp://localhost:" + portInputFormatted);
+                jobTracker.registerWorker("tcp://localhost:" + portInputFormatted);
             }
             
-
-            
-
             System.Console.WriteLine("<enter> para sair...");
             System.Console.ReadLine();
         }
