@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Worker
 {
-    class Worker : WorkerApi, JobTrackerApi
+    class Worker : MarshalByRefObject, WorkerApi, JobTrackerApi
     {
 
         private List<string> workers = new List<string>();
@@ -25,6 +25,11 @@ namespace Worker
         public void registerJob(string inputFilePath, int nSplits, string outputResultPath)
         {
             throw new NotImplementedException();
+        }
+
+        public void hello(string src)
+        {
+            System.Console.WriteLine("Hello from " + src);
         }
     }
 }
