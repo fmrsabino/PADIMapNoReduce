@@ -8,6 +8,7 @@ namespace Worker
     {
 
         private List<string> workers = new List<string>();
+        private int[] jobQueue;
 
         /**** WorkerImpl ****/
         public void registerWork(int[] splits)
@@ -41,17 +42,31 @@ namespace Worker
                 splitIds[i] = i;
             }
             
-            //TODO: Check remainder
             int division = nSplits / nWorkers;
-            int workerIndex = 0;
-            for (int i = 0; i < nSplits; i += division)
+            int remainder = nSplits % nWorkers;
+
+            if (remainder > 0) //Save remaining job
+            {
+                jobQueue = new int[remainder];
+                int startIndex = nWorkers * division;
+                Array.Copy(splitIds, startIndex, jobQueue, 0, remainder);
+
+                //Print jobQueue
+                string jobQueueText = "";
+                foreach (int splitId in jobQueue)
+                {
+                    jobQueueText += splitId + " ";
+                }
+                System.Console.WriteLine("Job Remainder: " + jobQueueText);
+            }
+
+            // Distribute jobs between workers
+            for (int i = 0; i < nWorkers; i++)
             {
                 int[] splits = new int[division];
-                Array.Copy(splitIds, i, splits, 0, division);
-                
-                WorkerApi worker = (WorkerApi) Activator.GetObject(typeof(WorkerApi), workers[workerIndex] + "/Worker");
+                Array.Copy(splitIds, i*division, splits, 0, division);
+                WorkerApi worker = (WorkerApi)Activator.GetObject(typeof(WorkerApi), workers[i] + "/Worker");
                 worker.registerWork(splits);
-                workerIndex++;
             }
         }
 

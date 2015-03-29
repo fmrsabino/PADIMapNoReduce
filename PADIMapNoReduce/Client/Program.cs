@@ -13,19 +13,15 @@ namespace Client
             ChannelServices.RegisterChannel(channel, true);
             while (true)
             {
-                System.Console.WriteLine("Write the number of splits");
+                System.Console.WriteLine("Write the number of splits and press <enter> to send job");
                 string splits = System.Console.ReadLine();
 
                 int splitsInputFormatted;
                 while (!int.TryParse(splits, out splitsInputFormatted))
                 {
-                    System.Console.WriteLine("Invalid port format. Register port: ");
+                    System.Console.WriteLine("Invalid number. Number of splits: ");
                     splits = System.Console.ReadLine();
                 }
-
-                System.Console.WriteLine("Press Enter to submit job");
-                System.Console.ReadLine();
-
                 
                 Worker.JobTrackerApi jobTracker =
                         (Worker.JobTrackerApi)Activator.GetObject(typeof(Worker.JobTrackerApi), "tcp://localhost:1000/Worker");
