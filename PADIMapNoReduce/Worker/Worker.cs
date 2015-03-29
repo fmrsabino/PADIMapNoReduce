@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Reflection;
 
 namespace Worker
 {
-    class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker, PADIMapNoReduce.IJobTracker
+    class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
-
         private List<string> workers = new List<string>();
         private int[] jobQueue;
+
+        private byte[] mapperCode;
+        private string mapperClass;
 
         /**** WorkerImpl ****/
         public void registerWork(int[] splits)
@@ -26,6 +28,12 @@ namespace Worker
             throw new NotImplementedException();
         }
 
+        public void saveMapper(byte[] code, string className)
+        {
+            Console.Out.WriteLine("Received code for class " + className);
+            mapperCode = code;
+            mapperClass = className;
+        }
 
         /**** JobTrackerImpl ****/
         public void registerJob(string inputFilePath, int nSplits, string outputResultPath)
@@ -86,9 +94,13 @@ namespace Worker
             }
         }
 
-        public bool SendMapper(byte[] code, string className)
+        public void broadcastMapper(byte[] code, string className)
         {
-            throw new NotImplementedException();
+            foreach (string workerUrl in workers)
+            {
+                PADIMapNoReduce.IWorker worker = (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/Worker");
+                worker.saveMapper(code, className);
+            }
         }
     }
 }

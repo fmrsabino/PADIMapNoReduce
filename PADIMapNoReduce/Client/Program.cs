@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Net.Sockets;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 
@@ -6,6 +8,9 @@ namespace Client
 {
     class Program
     {
+        public const string MAP_FUNC_LOCATION = "..\\..\\..\\LibMapper\\bin\\Debug\\LibMapper.dll";
+        public const string MAP_FUNC_CLASS_NAME = "Mapper";
+
         static void Main(string[] args)
         {
             Console.Title = "Client";
@@ -26,6 +31,17 @@ namespace Client
                 PADIMapNoReduce.IJobTracker jobTracker =
                         (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:1000/Worker");
                 jobTracker.registerJob("", splitsInputFormatted, "");
+
+                try
+                {
+                    byte[] mapperCode = File.ReadAllBytes(MAP_FUNC_LOCATION);
+                    jobTracker.broadcastMapper(mapperCode, MAP_FUNC_CLASS_NAME);
+                }
+                catch (SocketException)
+                {
+                    System.Console.WriteLine("Could not locate server");
+                }
+                
             }
         }
     }
