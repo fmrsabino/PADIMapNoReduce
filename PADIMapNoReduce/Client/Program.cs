@@ -23,8 +23,8 @@ namespace Client
                     splits = System.Console.ReadLine();
                 }
                 
-                Worker.JobTrackerApi jobTracker =
-                        (Worker.JobTrackerApi)Activator.GetObject(typeof(Worker.JobTrackerApi), "tcp://localhost:1000/Worker");
+                PADIMapNoReduce.IJobTracker jobTracker =
+                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:1000/Worker");
                 jobTracker.registerJob("", splitsInputFormatted, "");
             }
         }

@@ -40,13 +40,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Worker.cs" />
-    <Compile Include="WorkerApi.cs" />
-    <Compile Include="JobTrackerApi.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LibPADIMapNoReduce\LibPADIMapNoReduce.csproj">
+      <Project>{2d129022-0922-40c3-9987-17789e3a225f}</Project>
+      <Name>LibPADIMapNoReduce</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

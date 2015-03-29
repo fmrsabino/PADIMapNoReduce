@@ -7,7 +7,6 @@ namespace Worker
 {
     class Program
     {
-
         public const int JOB_TRACKER_PORT = 1000;
 
         static void Main(string[] args)
@@ -40,11 +39,11 @@ namespace Worker
             {
                 Console.Title = "Worker - " + "tcp://localhost:" + portInputFormatted;
                 System.Console.WriteLine("Worker registred");
-                JobTrackerApi jobTracker = 
-                    (JobTrackerApi) Activator.GetObject(typeof(JobTrackerApi), "tcp://localhost:" + JOB_TRACKER_PORT + "/Worker");
+                PADIMapNoReduce.IJobTracker jobTracker =
+                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:" + JOB_TRACKER_PORT + "/Worker");
                 jobTracker.registerWorker("tcp://localhost:" + portInputFormatted);
             }
-            
+
             System.Console.WriteLine("<enter> para sair...");
             System.Console.ReadLine();
         }

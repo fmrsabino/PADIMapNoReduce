@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Worker
 {
-    class Worker : MarshalByRefObject, WorkerApi, JobTrackerApi
+    class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker, PADIMapNoReduce.IJobTracker
     {
 
         private List<string> workers = new List<string>();
@@ -14,7 +14,8 @@ namespace Worker
         public void registerWork(int[] splits)
         {
             string splitsText = "";
-            foreach (int splitId in splits) {
+            foreach (int splitId in splits)
+            {
                 splitsText += splitId + " ";
             }
             Console.WriteLine("Received job for splits: " + splitsText);
@@ -31,17 +32,19 @@ namespace Worker
         {
             int nWorkers = workers.Count;
 
-            if (nWorkers == 0) {
+            if (nWorkers == 0)
+            {
                 System.Console.WriteLine("Error: No workers created");
                 return;
             }
 
             // Create split id's array
             int[] splitIds = new int[nSplits];
-            for(int i = 0; i < nSplits; i++) {
+            for (int i = 0; i < nSplits; i++)
+            {
                 splitIds[i] = i;
             }
-            
+
             int division = nSplits / nWorkers;
             int remainder = nSplits % nWorkers;
 
@@ -64,8 +67,8 @@ namespace Worker
             for (int i = 0; i < nWorkers; i++)
             {
                 int[] splits = new int[division];
-                Array.Copy(splitIds, i*division, splits, 0, division);
-                WorkerApi worker = (WorkerApi)Activator.GetObject(typeof(WorkerApi), workers[i] + "/Worker");
+                Array.Copy(splitIds, i * division, splits, 0, division);
+                PADIMapNoReduce.IWorker worker = (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i] + "/Worker");
                 worker.registerWork(splits);
             }
         }
@@ -81,6 +84,11 @@ namespace Worker
             {
                 System.Console.WriteLine(src + " is already registered.");
             }
+        }
+
+        public bool SendMapper(byte[] code, string className)
+        {
+            throw new NotImplementedException();
         }
     }
 }
