@@ -27,10 +27,19 @@ namespace Client
                     System.Console.WriteLine("Invalid number. Number of splits: ");
                     splits = System.Console.ReadLine();
                 }
+
+                System.Console.WriteLine("Write file size in bytes:");
+                string bytes = System.Console.ReadLine();
+                int fileSizeInputFormatted;
+                while (!int.TryParse(bytes, out fileSizeInputFormatted))
+                {
+                    System.Console.WriteLine("Invalid number. Number of bytes: ");
+                    bytes = System.Console.ReadLine();
+                }
                 
                 PADIMapNoReduce.IJobTracker jobTracker =
                         (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:1000/Worker");
-                jobTracker.registerJob("", splitsInputFormatted, "");
+                jobTracker.registerJob("", splitsInputFormatted, "", fileSizeInputFormatted);
 
                 try
                 {
