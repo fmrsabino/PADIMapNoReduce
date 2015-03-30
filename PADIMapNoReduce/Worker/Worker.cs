@@ -56,7 +56,7 @@ namespace Worker
                 }
                 else
                 {
-                    pair = new PADIMapNoReduce.Pair<int, int>(i * splitBytes, (i + 1 * splitBytes) - 1);
+                    pair = new PADIMapNoReduce.Pair<int, int>(i * splitBytes, (i + 1) * splitBytes - 1);
                     System.Console.WriteLine("Added split: " + pair.First + " to " + pair.Second);
                 }
 
