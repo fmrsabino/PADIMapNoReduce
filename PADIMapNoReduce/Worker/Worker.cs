@@ -7,20 +7,15 @@ namespace Worker
     class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
         private List<string> workers = new List<string>();
-        private int[] jobQueue;
+        private Queue<PADIMapNoReduce.Pair<int, int>> jobQueue;
 
         private byte[] mapperCode;
         private string mapperClass;
 
         /**** WorkerImpl ****/
-        public void registerWork(int[] splits)
+        public void registerWork(PADIMapNoReduce.Pair<int, int> byteInterval)
         {
-            string splitsText = "";
-            foreach (int splitId in splits)
-            {
-                splitsText += splitId + " ";
-            }
-            Console.WriteLine("Received job for splits: " + splitsText);
+            Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
         }
 
         public void registerSplitData(string data, int splitId)
@@ -36,48 +31,48 @@ namespace Worker
         }
 
         /**** JobTrackerImpl ****/
-        public void registerJob(string inputFilePath, int nSplits, string outputResultPath)
+        public void registerJob(string inputFilePath, int nSplits, string outputResultPath, int nBytes)
         {
             int nWorkers = workers.Count;
 
-            if (nWorkers == 0)
+            /*if (nWorkers == 0)
             {
                 System.Console.WriteLine("Error: No workers created");
                 return;
-            }
+            }*/
 
-            // Create split id's array
-            int[] splitIds = new int[nSplits];
+            int splitBytes = nBytes / nSplits;
+            int remaindersplitBytes = nBytes % nSplits;
+
+            jobQueue = new Queue<PADIMapNoReduce.Pair<int, int>>();
+
             for (int i = 0; i < nSplits; i++)
             {
-                splitIds[i] = i;
-            }
-
-            int division = nSplits / nWorkers;
-            int remainder = nSplits % nWorkers;
-
-            if (remainder > 0) //Save remaining job
-            {
-                jobQueue = new int[remainder];
-                int startIndex = nWorkers * division;
-                Array.Copy(splitIds, startIndex, jobQueue, 0, remainder);
-
-                //Print jobQueue
-                string jobQueueText = "";
-                foreach (int splitId in jobQueue)
+                PADIMapNoReduce.Pair<int, int> pair;
+                if (i == nSplits - 1)
                 {
-                    jobQueueText += splitId + " ";
+                    pair = new PADIMapNoReduce.Pair<int, int>(i * splitBytes + 1, nBytes);
+                    System.Console.WriteLine("Added split: " + pair.First + " to " + pair.Second);
                 }
-                System.Console.WriteLine("Job Remainder: " + jobQueueText);
+                else
+                {
+                    pair = new PADIMapNoReduce.Pair<int, int>(i * splitBytes + 1, (i + 1) * splitBytes);
+                    System.Console.WriteLine("Added split: " + pair.First + " to " + pair.Second);
+                }
+
+                jobQueue.Enqueue(pair);
             }
 
-            // Distribute jobs between workers
-            for (int i = 0; i < nWorkers; i++)
+            //Distribute to each worker one split
+            foreach (string workerUrl in workers)
             {
-                int[] splits = new int[division];
-                Array.Copy(splitIds, i * division, splits, 0, division);
-                PADIMapNoReduce.IWorker worker = (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i] + "/Worker");
-                worker.registerWork(splits);
+                if (jobQueue.Count == 0)
+                {
+                    //No more work to distribute
+                    break;
+                }
+                PADIMapNoReduce.IWorker worker = (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/Worker");
+                worker.registerWork(jobQueue.Dequeue());
             }
         }
 
