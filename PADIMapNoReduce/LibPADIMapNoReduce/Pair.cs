@@ -4,6 +4,7 @@ using System.Text;
 
 namespace PADIMapNoReduce
 {
+    [Serializable]
     public class Pair<T, U>
     {
         public Pair() { }
