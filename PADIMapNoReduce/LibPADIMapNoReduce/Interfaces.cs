@@ -9,19 +9,19 @@ namespace PADIMapNoReduce {
     public interface IJobTracker
     {
         void registerJob
-            (string inputFilePath, int nSplits, string outputResultPath, int nBytes, string clientUrl, byte[] mapperCode, string mapperClassName);
+            (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName);
         void registerWorker(string src);
     }
 
     public interface IWorker : IJobTracker
     {
         void setup(byte[] code, string className, string clientUrl);
-        void work(Pair<int, int> byteInterval);
+        void work(Pair<long, long> byteInterval);
     }
 
     public interface IClient
     {
         // Receives bytes and returns the lines corresponding to those bytes
-        int[] processBytes(Pair<int, int> byteInterval);
+        List<string> processBytes(Pair<long, long> byteInterval);
     }
 }
