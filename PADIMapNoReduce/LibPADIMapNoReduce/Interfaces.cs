@@ -22,6 +22,11 @@ namespace PADIMapNoReduce {
     public interface IClient
     {
         // Receives bytes and returns the lines corresponding to those bytes
+
         List<string> processBytes(Pair<long, long> byteInterval);
+
+        //Receives processedata from workers
+        void receiveProcessData();
+
     }
 }
