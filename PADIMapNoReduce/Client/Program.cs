@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 
@@ -10,12 +11,19 @@ namespace Client
     {
         public const string MAP_FUNC_LOCATION = "..\\..\\..\\LibMapper\\bin\\Debug\\LibMapper.dll";
         public const string MAP_FUNC_CLASS_NAME = "Mapper";
+        public const int CLIENT_PORT = 5000;
 
         static void Main(string[] args)
         {
             Console.Title = "Client";
-            TcpChannel channel = new TcpChannel();
+
+            TcpChannel channel = new TcpChannel(CLIENT_PORT);
             ChannelServices.RegisterChannel(channel, true);
+            RemotingConfiguration.RegisterWellKnownServiceType(
+                typeof(Client),
+                "Client",
+                WellKnownObjectMode.Singleton);
+
             while (true)
             {
                 System.Console.WriteLine("Write the number of splits and press <enter> to send job");
@@ -37,14 +45,13 @@ namespace Client
                     bytes = System.Console.ReadLine();
                 }
                 
-                PADIMapNoReduce.IJobTracker jobTracker =
-                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:1000/Worker");
-                jobTracker.registerJob("", splitsInputFormatted, "", fileSizeInputFormatted);
-
                 try
                 {
                     byte[] mapperCode = File.ReadAllBytes(MAP_FUNC_LOCATION);
-                    jobTracker.broadcastMapper(mapperCode, MAP_FUNC_CLASS_NAME);
+                    PADIMapNoReduce.IJobTracker jobTracker =
+                       (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:1000/Worker");
+                    jobTracker.registerJob("", splitsInputFormatted, "", fileSizeInputFormatted, "tcp://localhost:" + CLIENT_PORT + "/Client", 
+                        mapperCode, MAP_FUNC_CLASS_NAME);
                 }
                 catch (SocketException)
                 {

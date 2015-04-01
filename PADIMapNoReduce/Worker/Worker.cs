@@ -11,38 +11,40 @@ namespace Worker
 
         private byte[] mapperCode;
         private string mapperClass;
+        private string clientUrl;
 
         /**** WorkerImpl ****/
-        public void registerWork(PADIMapNoReduce.Pair<int, int> byteInterval)
-        {
-            Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
-        }
 
-        public void registerSplitData(string data, int splitId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void saveMapper(byte[] code, string className)
+        public void setup(byte[] code, string className, string clientUrl)
         {
             Console.Out.WriteLine("Received code for class " + className);
             mapperCode = code;
             mapperClass = className;
+            this.clientUrl = clientUrl;
+        }
+
+        public void work(PADIMapNoReduce.Pair<int, int> byteInterval)
+        {
+            Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
+            if (clientUrl != null)
+            {
+                PADIMapNoReduce.IClient client =
+                    (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
+
+                client.processBytes(byteInterval);
+            }
+            else
+            {
+                Console.WriteLine("Worker is not set");
+            }
+            
         }
 
         /**** JobTrackerImpl ****/
-        public void registerJob(string inputFilePath, int nSplits, string outputResultPath, int nBytes)
+        public void registerJob
+            (string inputFilePath, int nSplits, string outputResultPath, int nBytes, string clientUrl, byte[] mapperCode, string mapperClassName)
         {
-            int nWorkers = workers.Count;
-
-            /*if (nWorkers == 0)
-            {
-                System.Console.WriteLine("Error: No workers created");
-                return;
-            }*/
-
             int splitBytes = nBytes / nSplits;
-            int remaindersplitBytes = nBytes % nSplits;
 
             jobQueue = new Queue<PADIMapNoReduce.Pair<int, int>>();
 
@@ -71,8 +73,10 @@ namespace Worker
                     //No more work to distribute
                     break;
                 }
-                PADIMapNoReduce.IWorker worker = (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/Worker");
-                worker.registerWork(jobQueue.Dequeue());
+                PADIMapNoReduce.IWorker worker = 
+                    (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/Worker");
+                worker.setup(mapperCode, mapperClassName, clientUrl);
+                worker.work(jobQueue.Dequeue());
             }
         }
 
@@ -86,15 +90,6 @@ namespace Worker
             else
             {
                 System.Console.WriteLine(src + " is already registered.");
-            }
-        }
-
-        public void broadcastMapper(byte[] code, string className)
-        {
-            foreach (string workerUrl in workers)
-            {
-                PADIMapNoReduce.IWorker worker = (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/Worker");
-                worker.saveMapper(code, className);
             }
         }
     }
