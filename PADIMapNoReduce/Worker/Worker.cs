@@ -88,6 +88,8 @@ namespace Worker
                     (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/Worker");
                 worker.setup(mapperCode, mapperClassName, clientUrl);
                 worker.work(jobQueue.Dequeue());
+                System.Console.WriteLine("chegas aqui quando");
+
             }
         }
 

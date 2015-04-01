@@ -15,10 +15,16 @@ namespace Client
         public String worker_url;
         public const string MAP_FUNC_LOCATION = "..\\..\\..\\LibMapper\\bin\\Debug\\LibMapper.dll";
         public const string MAP_FUNC_CLASS_NAME = "Mapper";
+        public UserLevelApp userApp;
+        //ESTE PATH ESTÀ AQUI PARA POREM O CAMINHO CERTO NO TERMINAL
+        //public const string INPUT_FILE_PATH = "..\\..\\..\\test.txt";         
+        public String inputFilePath;
+        public String outputFolderPath;
 
-        
-        public Client(string worker) {
+        public Client(string worker, UserLevelApp userApp)
+        {
             worker_url = worker;
+            this.userApp = userApp;
 
             TcpChannel channel = new TcpChannel(Client_PORT);
             ChannelServices.RegisterChannel(channel, true);
@@ -27,13 +33,13 @@ namespace Client
                 "Client",
                 WellKnownObjectMode.Singleton);
         }
-    
+
         public List<string> processBytes(PADIMapNoReduce.Pair<long, long> byteInterval)
         {
             System.Console.WriteLine("Received request for bytes from " + byteInterval.First + " to " + byteInterval.Second);
 
             byte[] bytesRead = new byte[byteInterval.Second - byteInterval.First + 1];
-            BinaryReader reader = new BinaryReader(new FileStream(Program.INPUT_FILE_PATH, FileMode.Open));
+            BinaryReader reader = new BinaryReader(new FileStream(inputFilePath, FileMode.Open));
 
             reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
             reader.Read(bytesRead, 0, bytesRead.Length);
@@ -42,7 +48,7 @@ namespace Client
             string text = Encoding.UTF8.GetString(bytesRead);
             StringBuilder stringBuilder = new StringBuilder();
 
-            if (byteInterval.Second == new FileInfo(Program.INPUT_FILE_PATH).Length)
+            if (byteInterval.Second == new FileInfo(inputFilePath).Length)
             {
                 if (text[text.Length - 1] != '\n')
                 {
@@ -81,7 +87,7 @@ namespace Client
                     }
                 }
             }
-            
+
             /*
             foreach (char c in text)
             {
@@ -134,6 +140,8 @@ namespace Client
 
         public void submitJob(string inputFilePath, int splitsInputFormatted, string outputFolderPath, long fileSizeInputFormatted)
         {
+            this.inputFilePath = inputFilePath;
+            this.outputFolderPath = outputFolderPath;
             try
             {
                 byte[] mapperCode = File.ReadAllBytes(MAP_FUNC_LOCATION);
@@ -146,12 +154,12 @@ namespace Client
             {
                 System.Console.WriteLine("Could not locate server");
             }
-                
+
         }
 
-        public void receiveProcessData() {
- 
-            //Avisa o UserLevel App
+        public void receiveProcessData()
+        {
+            userApp.execute();
         }
 
     }
