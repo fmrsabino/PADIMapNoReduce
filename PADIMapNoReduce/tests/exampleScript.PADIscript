@@ -1,3 +1,5 @@
 TEST ENTRY 1
 TEST ENTRY 2
 SUBMIT 1 2 3 4 5 6
+WORKER 1 tcp://localhost:9000/test tcp://localhost:9001/test2 tcp://localhost:9002/te_st
+SUBMIT tcp://localhost:3001/test ../test.in ../test.out 1 TestMapper ../../TestMapper.dll
