@@ -7,7 +7,7 @@ namespace Worker
     class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
         private List<string> workers = new List<string>();
-        private Queue<PADIMapNoReduce.Pair<int, int>> jobQueue;
+        private Queue<PADIMapNoReduce.Pair<long, long>> jobQueue;
 
         private byte[] mapperCode;
         private string mapperClass;
@@ -23,7 +23,7 @@ namespace Worker
             this.clientUrl = clientUrl;
         }
 
-        public void work(PADIMapNoReduce.Pair<int, int> byteInterval)
+        public void work(PADIMapNoReduce.Pair<long, long> byteInterval)
         {
             Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
             if (clientUrl != null)
@@ -31,7 +31,13 @@ namespace Worker
                 PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
 
-                client.processBytes(byteInterval);
+                List<string> resultLines = client.processBytes(byteInterval);
+                System.Console.WriteLine("========= RESULT ==========");
+                foreach (string s in resultLines)
+                {
+                    System.Console.WriteLine(s);
+                }
+                System.Console.WriteLine("===========================");
             }
             else
             {
@@ -42,23 +48,28 @@ namespace Worker
 
         /**** JobTrackerImpl ****/
         public void registerJob
-            (string inputFilePath, int nSplits, string outputResultPath, int nBytes, string clientUrl, byte[] mapperCode, string mapperClassName)
+            (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName)
         {
-            int splitBytes = nBytes / nSplits;
+            if (nSplits == 0)
+            {
+                return;
+            }
 
-            jobQueue = new Queue<PADIMapNoReduce.Pair<int, int>>();
+            long splitBytes = nBytes / nSplits;
+
+            jobQueue = new Queue<PADIMapNoReduce.Pair<long, long>>();
 
             for (int i = 0; i < nSplits; i++)
             {
-                PADIMapNoReduce.Pair<int, int> pair;
+                PADIMapNoReduce.Pair<long, long> pair;
                 if (i == nSplits - 1)
                 {
-                    pair = new PADIMapNoReduce.Pair<int, int>(i * splitBytes + 1, nBytes);
+                    pair = new PADIMapNoReduce.Pair<long, long>(i * splitBytes, nBytes);
                     System.Console.WriteLine("Added split: " + pair.First + " to " + pair.Second);
                 }
                 else
                 {
-                    pair = new PADIMapNoReduce.Pair<int, int>(i * splitBytes + 1, (i + 1) * splitBytes);
+                    pair = new PADIMapNoReduce.Pair<long, long>(i * splitBytes, (i + 1) * splitBytes - 1);
                     System.Console.WriteLine("Added split: " + pair.First + " to " + pair.Second);
                 }
 

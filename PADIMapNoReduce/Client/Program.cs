@@ -12,6 +12,7 @@ namespace Client
         public const string MAP_FUNC_LOCATION = "..\\..\\..\\LibMapper\\bin\\Debug\\LibMapper.dll";
         public const string MAP_FUNC_CLASS_NAME = "Mapper";
         public const int CLIENT_PORT = 5000;
+        public const string INPUT_FILE_PATH = "..\\..\\..\\test.txt";
 
         static void Main(string[] args)
         {
@@ -35,29 +36,25 @@ namespace Client
                     System.Console.WriteLine("Invalid number. Number of splits: ");
                     splits = System.Console.ReadLine();
                 }
-
-                System.Console.WriteLine("Write file size in bytes:");
-                string bytes = System.Console.ReadLine();
-                int fileSizeInputFormatted;
-                while (!int.TryParse(bytes, out fileSizeInputFormatted))
-                {
-                    System.Console.WriteLine("Invalid number. Number of bytes: ");
-                    bytes = System.Console.ReadLine();
-                }
                 
                 try
                 {
+                    long fileSize = new FileInfo(INPUT_FILE_PATH).Length;
                     byte[] mapperCode = File.ReadAllBytes(MAP_FUNC_LOCATION);
                     PADIMapNoReduce.IJobTracker jobTracker =
                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:1000/Worker");
-                    jobTracker.registerJob("", splitsInputFormatted, "", fileSizeInputFormatted, "tcp://localhost:" + CLIENT_PORT + "/Client", 
+                    jobTracker.registerJob(INPUT_FILE_PATH, splitsInputFormatted, "",
+                        fileSize, "tcp://localhost:" + CLIENT_PORT + "/Client", 
                         mapperCode, MAP_FUNC_CLASS_NAME);
                 }
                 catch (SocketException)
                 {
                     System.Console.WriteLine("Could not locate server");
                 }
-                
+
+                System.Console.WriteLine("===============================");
+                System.Console.WriteLine("===============================");
+                System.Console.WriteLine("");
             }
         }
     }
