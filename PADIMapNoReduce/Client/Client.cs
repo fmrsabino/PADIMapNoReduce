@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
-using System.Text;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
+using System.Text;
 
 namespace Client
 {
@@ -38,13 +38,98 @@ namespace Client
             reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
             reader.Read(bytesRead, 0, bytesRead.Length);
 
+            List<string> result = new List<string>();
             string text = Encoding.UTF8.GetString(bytesRead);
+            StringBuilder stringBuilder = new StringBuilder();
 
-            List<string> lines = new List<string>();
-            lines.Add(text);
+            if (byteInterval.Second == new FileInfo(Program.INPUT_FILE_PATH).Length)
+            {
+                if (text[text.Length - 1] != '\n')
+                {
+                    System.Console.WriteLine("Need to fetch more bytes to complete line");
 
+
+                    byte[] newBytes = new byte[20];
+
+
+                    StringBuilder sb = new StringBuilder(text);
+                    bool foundNewLine = false;
+                    long currentPosition = byteInterval.Second;
+
+                    while (!foundNewLine)
+                    {
+                        //Retrieve more bytes
+                        reader.BaseStream.Seek(currentPosition, SeekOrigin.Begin);
+                        reader.Read(newBytes, 0, newBytes.Length);
+                        string newText = Encoding.UTF8.GetString(newBytes);
+
+                        //Scan for the new line
+                        foreach (char c in newText)
+                        {
+                            if (c != '\n')
+                            {
+                                sb.Append(c);
+                            }
+                            else
+                            {
+                                foundNewLine = true;
+                                text = sb.ToString();
+                                break;
+                            }
+                        }
+                        currentPosition += 20;
+                    }
+                }
+            }
+            
+            /*
+            foreach (char c in text)
+            {
+                if (c == '\n')
+                {
+                    result.Add(stringBuilder.ToString());
+                    System.Console.WriteLine("Found New Line");
+                }
+                else
+                {
+                    stringBuilder.Append(c);
+                }
+            }
+            */
+
+            System.Console.WriteLine(text);
+
+            /*
+            string[] parts = Regex.Split(text, @"(?<=\\n)");
+            foreach (string s in parts)
+            {
+                System.Console.Write("Last char is: " + s[s.Length - 1]);
+                //result.Add(s);
+                /*if (s[s.Length - 1] == '\n')
+                {
+                    System.Console.WriteLine(s + " ends with a new line");
+                    result.Add(s);
+                }
+                else
+                {
+                    System.Console.WriteLine(s + " doesn't end with a new line");
+                }
+            }*/
+
+            /*
+
+            StringReader stringReader = new StringReader(text);
+            string line;
+            while ((line = stringReader.ReadLine()) != null)
+            {
+                if (line[line.Length - 1] == '\n')
+                {
+                    result.Add(line);
+                }
+            }
+            */
             reader.Close();
-            return lines;
+            return result;
         }
 
         public void submitJob(string inputFilePath, int splitsInputFormatted, string outputFolderPath, long fileSizeInputFormatted)
