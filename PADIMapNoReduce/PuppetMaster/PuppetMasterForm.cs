@@ -31,20 +31,26 @@ namespace PuppetMaster
         }
 
         private void executeCommand(string command) {
-            MessageBox.Show("Executed command '" + command + "'.");
 
             // Regexes for commands
             // WORKER <ID> <PUPPETMASTER-URL> <SERVICE-URL> <ENTRY-URL>:
-            Regex worker = new Regex("WORKER (\\d)+ (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
+            Regex worker = new Regex("WORKER (\\d+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
             // SUBMIT <ENTRY-URL> <FILE> <OUTPUT> <S> <MAP> <DLL>
             Regex submit = new Regex("SUBMIT (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) (\\d+) ([a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+)");
-            Regex wait = new Regex("WORKER (\\d)+ (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
-            Regex status = new Regex("WORKER (\\d)+ (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
-            Regex sloww = new Regex("WORKER (\\d)+ (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
-            Regex freezew = new Regex("WORKER (\\d)+ (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
-            Regex unfreezew = new Regex("WORKER (\\d)+ (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
-            Regex freezec = new Regex("WORKER (\\d)+ (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
-            Regex unfreezec = new Regex("WORKER (\\d)+ (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
+            //WAIT <SECS>
+            Regex wait = new Regex("WAIT (\\d+)");
+            //STATUS
+            Regex status = new Regex("STATUS");
+            //SLOWW <ID> <delay-in-seconds>
+            Regex sloww = new Regex("SLOWW (\\d+) (\\d+)");
+            //FREEZEW <ID>
+            Regex freezew = new Regex("FREEZEW (\\d+)");
+            //UNFREEZEW <ID>
+            Regex unfreezew = new Regex("UNFREEZEW (\\d+)");
+            //FREEZEC <ID>
+            Regex freezec = new Regex("FREEZEC (\\d+)");
+            //UNFREEZEC <ID>
+            Regex unfreezec = new Regex("UNFREEZEC (\\d+)");
 
             MatchCollection matches;
             // WORKER Command
@@ -67,7 +73,7 @@ namespace PuppetMaster
             matches = wait.Matches(command);
             if (matches.Count > 0)
             {
-                executeWORKERCommand(matches);
+                executeWAITCommand(matches);
                 return;
             }
 
@@ -75,7 +81,7 @@ namespace PuppetMaster
             matches = status.Matches(command);
             if (matches.Count > 0)
             {
-                executeWORKERCommand(matches);
+                executeSTATUSCommand(matches);
                 return;
             }
 
@@ -83,7 +89,7 @@ namespace PuppetMaster
             matches = sloww.Matches(command);
             if (matches.Count > 0)
             {
-                executeWORKERCommand(matches);
+                executeSLOWWCommand(matches);
                 return;
             }
 
@@ -91,7 +97,7 @@ namespace PuppetMaster
             matches = freezew.Matches(command);
             if (matches.Count > 0)
             {
-                executeWORKERCommand(matches);
+                executeFREEZEWCommand(matches);
                 return;
             }
 
@@ -99,7 +105,7 @@ namespace PuppetMaster
             matches = unfreezew.Matches(command);
             if (matches.Count > 0)
             {
-                executeWORKERCommand(matches);
+                executeUNFREEZEWCommand(matches);
                 return;
             }
 
@@ -107,7 +113,7 @@ namespace PuppetMaster
             matches = freezec.Matches(command);
             if (matches.Count > 0)
             {
-                executeWORKERCommand(matches);
+                executeFREEZECCommand(matches);
                 return;
             }
 
@@ -115,9 +121,12 @@ namespace PuppetMaster
             matches = unfreezec.Matches(command);
             if (matches.Count > 0)
             {
-                executeWORKERCommand(matches);
+                executeUNFREEZECCommand(matches);
                 return;
             }
+
+            // Else - no command matched
+            MessageBox.Show("Error! Not a valid command in this system.");
         }
 
         private void executeWORKERCommand(MatchCollection matches) {
@@ -155,6 +164,112 @@ namespace PuppetMaster
             }
 
         }
+
+        private void executeWAITCommand(MatchCollection matches)
+        {
+
+            try
+            {
+                int seconds = int.Parse(matches[0].Groups[1].Value);
+
+                MessageBox.Show("WAIT - Seconds: " + seconds);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Error parsing seconds: " + e.Message);
+            }
+
+        }
+
+        private void executeSTATUSCommand(MatchCollection matches)
+        {
+
+                MessageBox.Show("STATUS: insert status here");
+
+        }
+
+        private void executeSLOWWCommand(MatchCollection matches)
+        {
+
+            try
+            {
+                int id = int.Parse(matches[0].Groups[1].Value);
+                int seconds = int.Parse(matches[0].Groups[2].Value);
+
+                MessageBox.Show("SLOWW\nId: " + id + "\nSeconds: " + seconds);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Error parsing id or seconds: " + e.Message);
+            }
+
+        }
+
+        private void executeFREEZEWCommand(MatchCollection matches)
+        {
+
+            try
+            {
+                int id = int.Parse(matches[0].Groups[1].Value);
+
+                MessageBox.Show("FREEZEW - Id: " + id);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Error parsing id: " + e.Message);
+            }
+
+        }
+
+        private void executeUNFREEZEWCommand(MatchCollection matches)
+        {
+
+            try
+            {
+                int id = int.Parse(matches[0].Groups[1].Value);
+
+                MessageBox.Show("UNFREEZEW - Id: " + id);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Error parsing id: " + e.Message);
+            }
+
+        }
+
+        private void executeFREEZECCommand(MatchCollection matches)
+        {
+
+            try
+            {
+                int id = int.Parse(matches[0].Groups[1].Value);
+
+                MessageBox.Show("FREEZEC - Id: " + id);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Error parsing id: " + e.Message);
+            }
+
+        }
+
+        private void executeUNFREEZECCommand(MatchCollection matches)
+        {
+
+            try
+            {
+                int id = int.Parse(matches[0].Groups[1].Value);
+
+                MessageBox.Show("UNFREEZEC - Id: " + id);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Error parsing id: " + e.Message);
+            }
+
+        }
+
+
 
 
         private void openScriptDialog_FileOk(object sender, CancelEventArgs e)
