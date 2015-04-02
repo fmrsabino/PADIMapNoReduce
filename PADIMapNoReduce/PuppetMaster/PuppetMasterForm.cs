@@ -8,6 +8,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.Remoting;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Tcp;
+using System.Threading;
 
 namespace PuppetMaster
 {
@@ -18,39 +22,54 @@ namespace PuppetMaster
         List<Dictionary<int, string>> workers;
         List<string> commands;
 
+        public delegate void MockStartWorker(int id, string serviceURL, string entryURL);
+        public MockStartWorker delegateMockStartWorker;
+
         public PuppetMasterForm(int port)
         {
             InitializeComponent();
 
-            puppetMasterURL = "tcp://localhost:" + port + "/";
+            puppetMasterURL = "tcp://localhost:" + port + "/PM";
             this.Text = "Puppet Master running on: " + puppetMasterURL;
 
             puppetMasters = new List<string>();
             workers = new List<Dictionary<int, string>>();
             commands = new List<string>();
+
+            delegateMockStartWorker = new MockStartWorker(mockStartWorker);
+
+            TcpChannel receiveChannel = new TcpChannel(Convert.ToInt32(port));
+            ChannelServices.RegisterChannel(receiveChannel, true);
+            RemotingConfiguration.RegisterWellKnownServiceType(
+                typeof(PuppetMaster),
+                "PM",
+                WellKnownObjectMode.Singleton);
+
         }
 
         private void executeCommand(string command) {
 
             // Regexes for commands
             // WORKER <ID> <PUPPETMASTER-URL> <SERVICE-URL> <ENTRY-URL>:
-            Regex worker = new Regex("WORKER (\\d+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
+            Regex worker = new Regex("^WORKER (\\d+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
             // SUBMIT <ENTRY-URL> <FILE> <OUTPUT> <S> <MAP> <DLL>
-            Regex submit = new Regex("SUBMIT (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) (\\d+) ([a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+)");
+            Regex submit = new Regex("^SUBMIT (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) (\\d+) ([a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+)");
             //WAIT <SECS>
-            Regex wait = new Regex("WAIT (\\d+)");
+            Regex wait = new Regex("^WAIT (\\d+)");
             //STATUS
-            Regex status = new Regex("STATUS");
+            Regex status = new Regex("^STATUS");
             //SLOWW <ID> <delay-in-seconds>
-            Regex sloww = new Regex("SLOWW (\\d+) (\\d+)");
+            Regex sloww = new Regex("^SLOWW (\\d+) (\\d+)");
             //FREEZEW <ID>
-            Regex freezew = new Regex("FREEZEW (\\d+)");
+            Regex freezew = new Regex("^FREEZEW (\\d+)");
             //UNFREEZEW <ID>
-            Regex unfreezew = new Regex("UNFREEZEW (\\d+)");
+            Regex unfreezew = new Regex("^UNFREEZEW (\\d+)");
             //FREEZEC <ID>
-            Regex freezec = new Regex("FREEZEC (\\d+)");
+            Regex freezec = new Regex("^FREEZEC (\\d+)");
             //UNFREEZEC <ID>
-            Regex unfreezec = new Regex("UNFREEZEC (\\d+)");
+            Regex unfreezec = new Regex("^UNFREEZEC (\\d+)");
+            // Any commented out command
+            Regex comment = new Regex("^%");
 
             MatchCollection matches;
             // WORKER Command
@@ -125,6 +144,14 @@ namespace PuppetMaster
                 return;
             }
 
+            // Commented out Command
+            matches = comment.Matches(command);
+            if (matches.Count > 0)
+            {
+                // Do nothing
+                return;
+            }
+
             // Else - no command matched
             MessageBox.Show("Error! Not a valid command in this system.");
         }
@@ -137,10 +164,16 @@ namespace PuppetMaster
                 string ServiceURL = matches[0].Groups[3].Value;
                 string EntryURL = matches[0].Groups[4].Value;
                 MessageBox.Show("workerId: " + workerId + "\nPuppetMasterURL: " + PuppetMasterURL + "\nServiceURL: " + ServiceURL + "\nEntryURL: " + EntryURL);
+
+                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+                    typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
+
+                pm.startWorker(workerId, ServiceURL, EntryURL);
+
             }
             catch (Exception e)
             {
-                MessageBox.Show("Error parsing workerId: " + e.Message);
+                MessageBox.Show("Error encountered: " + e.Message);
             }
         }
 
@@ -269,6 +302,10 @@ namespace PuppetMaster
 
         }
 
+        // This mock method provides a way to test our remoting object
+        private void mockStartWorker(int id, string serviceURL, string entryURL) {
+            MessageBox.Show("Spawned worker id: " + id + "\nat Service URL: " + serviceURL + "\nusing the Entry URL: " + entryURL);
+        }
 
 
 
