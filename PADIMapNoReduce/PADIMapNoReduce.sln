@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 14
+VisualStudioVersion = 14.0.22310.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Worker", "Worker\Worker.csproj", "{FB86CBE6-9B9E-43C9-9F17-7B14DBDA0CD5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{65FA6948-758D-4D5C-B1EF-1C3F699A8BE4}"
@@ -10,6 +12,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibMapper", "LibMapper\LibMapper.csproj", "{E70FBDBF-80B2-44D5-8E93-7C14D5D6D1BA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PuppetMaster", "PuppetMaster\PuppetMaster.csproj", "{30B83849-4AE6-4A08-BA44-CA5C7F555F10}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2D129022-0922-40C3-9987-17789E3A225F} = {2D129022-0922-40C3-9987-17789E3A225F}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

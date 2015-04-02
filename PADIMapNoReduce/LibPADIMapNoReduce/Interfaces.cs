@@ -29,4 +29,12 @@ namespace PADIMapNoReduce {
         void receiveProcessData();
 
     }
+
+    public interface IPuppetMaster
+    {
+
+        bool startWorker(int id, string serviceURL, string entryURL);
+
+    }
+
 }
