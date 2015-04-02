@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 
 namespace PADIMapNoReduce {
     public interface IMapper
@@ -26,7 +27,10 @@ namespace PADIMapNoReduce {
         List<string> processBytes(Pair<long, long> byteInterval);
 
         //Receives processedata from workers
-        void receiveProcessData();
+        void receiveProcessData(byte[] output);
+
+        //Receives notification from JobTracker that job is concluded
+        void concludedJob();
 
     }
 }

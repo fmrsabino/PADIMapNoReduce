@@ -20,6 +20,7 @@ namespace Client
         //public const string INPUT_FILE_PATH = "..\\..\\..\\test.txt";         
         public String inputFilePath;
         public String outputFolderPath;
+        public int counterOutput = 0;
 
         public Client(string worker, UserLevelApp userApp)
         {
@@ -156,10 +157,17 @@ namespace Client
             }
 
         }
-
-        public void receiveProcessData()
-        {
+        public void concludedJob() {
             userApp.execute();
+        }
+
+
+        public void receiveProcessData(byte[] output)
+        {
+            counterOutput++;
+            String outputFilePath = outputFolderPath + "/" + counterOutput + ".out";
+            FileStream fs = File.Create(outputFilePath);
+            fs.Write(output, 0, output.Length);
         }
 
     }
