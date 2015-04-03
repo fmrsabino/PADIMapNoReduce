@@ -17,10 +17,12 @@ namespace Client
         public const string MAP_FUNC_CLASS_NAME = "Mapper";
         public UserLevelApp userApp;
         //ESTE PATH ESTÀ AQUI PARA POREM O CAMINHO CERTO NO TERMINAL
-        //public const string INPUT_FILE_PATH = "..\\..\\..\\test.txt";         
-        public String inputFilePath;
+        public const string INPUT_FILE_PATH = "..\\..\\..\\test.txt";         
+        //public String inputFilePath;
         public String outputFolderPath;
         public int counterOutput = 0;
+
+        public Client() { }
 
         public Client(string worker, UserLevelApp userApp)
         {
@@ -39,116 +41,143 @@ namespace Client
         {
             System.Console.WriteLine("Received request for bytes from " + byteInterval.First + " to " + byteInterval.Second);
 
-            byte[] bytesRead = new byte[byteInterval.Second - byteInterval.First + 1];
-            BinaryReader reader = new BinaryReader(new FileStream(inputFilePath, FileMode.Open));
-
-            reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
-            reader.Read(bytesRead, 0, bytesRead.Length);
-
-            List<string> result = new List<string>();
-            string text = Encoding.UTF8.GetString(bytesRead);
+            List<string> result = new List<string>();            
             StringBuilder stringBuilder = new StringBuilder();
 
-            if (byteInterval.Second == new FileInfo(inputFilePath).Length)
+            long fileSize = new FileInfo(INPUT_FILE_PATH).Length;
+            if (byteInterval.First == 0 && byteInterval.Second == fileSize)
             {
-                if (text[text.Length - 1] != '\n')
+                stringBuilder.Append(readByteInterval(byteInterval));
+            }
+            else
+            {
+                if (byteInterval.First == 0) //FirstSplit
                 {
-                    System.Console.WriteLine("Need to fetch more bytes to complete line");
-
-
-                    byte[] newBytes = new byte[20];
-
-
-                    StringBuilder sb = new StringBuilder(text);
-                    bool foundNewLine = false;
-                    long currentPosition = byteInterval.Second;
-
-                    while (!foundNewLine)
+                    long lastByte;
+                    stringBuilder.Append(readByteInterval(byteInterval));
+                    if (!stringBuilder.ToString().EndsWith("\n"))
                     {
-                        //Retrieve more bytes
-                        reader.BaseStream.Seek(currentPosition, SeekOrigin.Begin);
-                        reader.Read(newBytes, 0, newBytes.Length);
-                        string newText = Encoding.UTF8.GetString(newBytes);
+                        stringBuilder.Append(readUntilNewLine(byteInterval.Second + 1, out lastByte));
+                    }   
+                }
+                else if (byteInterval.Second == fileSize) //lastSplit
+                {
+                    long lastByte = byteInterval.First;
+                    char lastChar = getCharFromBytePosition(byteInterval.First - 1);
 
-                        //Scan for the new line
-                        foreach (char c in newText)
-                        {
-                            if (c != '\n')
-                            {
-                                sb.Append(c);
-                            }
-                            else
-                            {
-                                foundNewLine = true;
-                                text = sb.ToString();
-                                break;
-                            }
-                        }
-                        currentPosition += 20;
+                    if (lastChar != '\n')
+                    {
+                        readUntilNewLine(byteInterval.First, out lastByte);
+                        lastByte++;
+                    }
+                    stringBuilder.Append(readByteInterval(new PADIMapNoReduce.Pair<long, long>(lastByte, fileSize)));
+                }
+                else //middle split
+                {
+                    long lastByte = byteInterval.First;
+                    char lastChar = getCharFromBytePosition(byteInterval.First - 1);
+
+                    if (lastChar != '\n')
+                    {
+                        readUntilNewLine(byteInterval.First, out lastByte);
+                        lastByte++;
+                    }
+                    stringBuilder.Append(readByteInterval(new PADIMapNoReduce.Pair<long, long>(lastByte, byteInterval.Second)));
+                    if (!stringBuilder.ToString().EndsWith("\n"))
+                    {
+                        stringBuilder.Append(readUntilNewLine(byteInterval.Second + 1, out lastByte));
                     }
                 }
             }
+            System.Console.WriteLine(stringBuilder.ToString());
 
-            /*
-            foreach (char c in text)
+            string finalString = stringBuilder.ToString();
+            string[] lines = finalString.Split(new string[] {Environment.NewLine}, System.StringSplitOptions.RemoveEmptyEntries);
+            foreach (string line in lines)
             {
-                if (c == '\n')
-                {
-                    result.Add(stringBuilder.ToString());
-                    System.Console.WriteLine("Found New Line");
-                }
-                else
-                {
-                    stringBuilder.Append(c);
-                }
+                result.Add(line);
             }
-            */
 
-            System.Console.WriteLine(text);
-
-            /*
-            string[] parts = Regex.Split(text, @"(?<=\\n)");
-            foreach (string s in parts)
-            {
-                System.Console.Write("Last char is: " + s[s.Length - 1]);
-                //result.Add(s);
-                /*if (s[s.Length - 1] == '\n')
-                {
-                    System.Console.WriteLine(s + " ends with a new line");
-                    result.Add(s);
-                }
-                else
-                {
-                    System.Console.WriteLine(s + " doesn't end with a new line");
-                }
-            }*/
-
-            /*
-
-            StringReader stringReader = new StringReader(text);
-            string line;
-            while ((line = stringReader.ReadLine()) != null)
-            {
-                if (line[line.Length - 1] == '\n')
-                {
-                    result.Add(line);
-                }
-            }
-            */
-            reader.Close();
             return result;
+        }
+
+        //Reads the character from the byte position
+        private char getCharFromBytePosition(long bytePos)
+        {
+            byte[] bytes = new byte[1];
+            BinaryReader reader = new BinaryReader(new FileStream(INPUT_FILE_PATH, FileMode.Open));
+
+            reader.BaseStream.Seek(bytePos, SeekOrigin.Begin);
+            reader.Read(bytes, 0, bytes.Length);
+            string text = Encoding.UTF8.GetString(bytes);
+
+            reader.Close();
+            return text[0];
+        }
+
+        //Returns the string that corresponds to the byteInterval received
+        private string readByteInterval(PADIMapNoReduce.Pair<long, long> byteInterval)
+        {
+            if (byteInterval.First > byteInterval.Second)
+            {
+                return "";
+            }
+
+            byte[] bytes = new byte[byteInterval.Second - byteInterval.First + 1];
+            BinaryReader reader = new BinaryReader(new FileStream(INPUT_FILE_PATH, FileMode.Open));
+
+            reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
+            reader.Read(bytes, 0, bytes.Length);
+            string text = Encoding.UTF8.GetString(bytes);
+            
+            reader.Close();
+            return text;
+        }
+
+        //Get the portion of the string from startByte to the first newline encountered
+        private string readUntilNewLine(long startByte, out long endByte)
+        {
+            StringBuilder sb = new StringBuilder();
+            BinaryReader reader = new BinaryReader(new FileStream(INPUT_FILE_PATH, FileMode.Open));
+            byte[] bytes = new byte[20];
+
+            long newLinePos = -1;
+            while (true)
+            {
+                //Retrieve more bytes
+                reader.BaseStream.Seek(startByte, SeekOrigin.Begin);
+                reader.Read(bytes, 0, bytes.Length);
+                string text = Encoding.UTF8.GetString(bytes);
+
+                if ((newLinePos = text.IndexOf("\n")) == -1)
+                {
+                    //safe to write to string
+                    sb.Append(Encoding.UTF8.GetString(bytes));
+                    startByte += 20;
+                }
+                else
+                {
+                    //We now have the correct value of newLinePos
+                    break;
+                }
+            }
+
+            //Read until new line
+            endByte = startByte + newLinePos;
+            reader.Close();
+            sb.Append(readByteInterval(new PADIMapNoReduce.Pair<long, long>(startByte, endByte)));
+            return sb.ToString();
         }
 
         public void submitJob(string inputFilePath, int splitsInputFormatted, string outputFolderPath, long fileSizeInputFormatted)
         {
-            this.inputFilePath = inputFilePath;
             this.outputFolderPath = outputFolderPath;
             try
             {
                 byte[] mapperCode = File.ReadAllBytes(MAP_FUNC_LOCATION);
                 PADIMapNoReduce.IJobTracker jobTracker =
                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), worker_url);
-                jobTracker.registerJob(inputFilePath, splitsInputFormatted, outputFolderPath, fileSizeInputFormatted, "tcp://localhost:" + Client_PORT + "/Client",
+                jobTracker.registerJob(INPUT_FILE_PATH, splitsInputFormatted, outputFolderPath, fileSizeInputFormatted, "tcp://localhost:" + Client_PORT + "/Client",
                     mapperCode, MAP_FUNC_CLASS_NAME);
             }
             catch (SocketException)
@@ -157,6 +186,7 @@ namespace Client
             }
 
         }
+
         public void concludedJob() {
             userApp.execute();
         }

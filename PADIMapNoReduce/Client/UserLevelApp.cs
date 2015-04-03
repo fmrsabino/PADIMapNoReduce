@@ -9,6 +9,7 @@ namespace Client
     {
         public string inputFilePath, outputFolderPath;
         public int splitsInputFormatted;
+        public const string INPUT_FILE_PATH = "..\\..\\..\\test.txt"; 
         string worker_url = "tcp://localhost:1000/Worker";
         Client client;
 
@@ -52,7 +53,7 @@ namespace Client
 
         public void createClient()
         {
-            long fileSize = new FileInfo(inputFilePath).Length;
+            long fileSize = new FileInfo(INPUT_FILE_PATH).Length;
             client.submitJob(inputFilePath, splitsInputFormatted, outputFolderPath, fileSize);
 
             System.Console.WriteLine("===============================");
@@ -62,10 +63,13 @@ namespace Client
 
         public void execute()
         {
-            getInputFile();
-            getNumberSplits();
-            getOutputFolder();
-            createClient();
+            while (true)
+            {
+                //getInputFile();
+                getNumberSplits();
+                //getOutputFolder();
+                createClient();
+            }
         }
     }
 }
