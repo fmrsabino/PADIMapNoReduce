@@ -139,10 +139,11 @@ namespace Client
         {
             StringBuilder sb = new StringBuilder();
             BinaryReader reader = new BinaryReader(new FileStream(INPUT_FILE_PATH, FileMode.Open));
+            long fileSize = new FileInfo(INPUT_FILE_PATH).Length;
             byte[] bytes = new byte[20];
 
             long newLinePos = -1;
-            while (true)
+            while (startByte < fileSize)
             {
                 //Retrieve more bytes
                 reader.BaseStream.Seek(startByte, SeekOrigin.Begin);

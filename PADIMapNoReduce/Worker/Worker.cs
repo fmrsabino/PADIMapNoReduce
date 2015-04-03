@@ -12,21 +12,22 @@ namespace Worker
         private byte[] mapperCode;
         private string mapperClass;
         private string clientUrl;
+        private bool workerSetup = false;
 
         /**** WorkerImpl ****/
-
         public void setup(byte[] code, string className, string clientUrl)
         {
             Console.Out.WriteLine("Received code for class " + className);
             mapperCode = code;
             mapperClass = className;
             this.clientUrl = clientUrl;
+            workerSetup = true;
         }
 
         public void work(PADIMapNoReduce.Pair<long, long> byteInterval)
         {
             Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
-            if (clientUrl != null)
+            if (workerSetup)
             {
                 PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
@@ -38,12 +39,57 @@ namespace Worker
                     System.Console.WriteLine(s);
                 }
                 System.Console.WriteLine("===========================");
+                map(resultLines);
             }
             else
             {
                 Console.WriteLine("Worker is not set");
             }
-            
+        }
+
+        public bool map(List<string> lines)
+        {
+            Assembly assembly = Assembly.Load(mapperCode);
+            // Walk through each type in the assembly looking for our class
+            foreach (Type type in assembly.GetTypes())
+            {
+                if (type.IsClass == true)
+                {
+                    if (type.FullName.EndsWith("." + mapperClass))
+                    {
+                        // create an instance of the object
+                        object ClassObj = Activator.CreateInstance(type);
+
+                        List<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
+                        // Dynamically Invoke the method
+                        foreach (string line in lines)
+                        {
+                            object[] args = new object[] { line };
+                            object resultObject = type.InvokeMember("Map",
+                              BindingFlags.Default | BindingFlags.InvokeMethod,
+                                   null,
+                                   ClassObj,
+                                   args);
+
+                            IList<KeyValuePair<string, string>> tempResult = (IList<KeyValuePair<string, string>>)resultObject;
+                            //Can't join two ILists :(
+                            foreach (KeyValuePair<string, string> p in tempResult) 
+                            {
+                                result.Add(p);
+                            }
+
+                        }
+
+                        Console.WriteLine("Map call result was: ");
+                        foreach (KeyValuePair<string, string> p in result)
+                        {
+                            Console.WriteLine("key: " + p.Key + ", value: " + p.Value);
+                        }
+                        return true;
+                    }
+                }
+            }
+            throw (new System.Exception("could not invoke method"));
         }
 
         /**** JobTrackerImpl ****/
