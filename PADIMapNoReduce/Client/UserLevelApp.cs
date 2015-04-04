@@ -9,7 +9,7 @@ namespace Client
     {
         public string inputFilePath, outputFolderPath;
         public int splitsInputFormatted;
-        private Client client;
+        //private Client client;
 
         public void getInputFile()
         {

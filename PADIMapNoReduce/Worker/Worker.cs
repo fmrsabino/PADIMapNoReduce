@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 
 namespace Worker
 {
@@ -137,7 +138,17 @@ namespace Worker
                 PADIMapNoReduce.IWorker worker =
                     (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/" + WORKER_OBJECT_ID);
                 worker.setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
-                worker.work(jobQueue.Dequeue());
+                
+                Thread t = new Thread(this.sendWork);
+                t.Start(worker);
+            }
+        }
+
+        private void sendWork(object worker)
+        {
+            while (jobQueue.Count > 0)
+            {
+                ((PADIMapNoReduce.IWorker)worker).work(jobQueue.Dequeue());
             }
         }
 
