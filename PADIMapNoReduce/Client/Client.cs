@@ -55,6 +55,12 @@ namespace Client
                         readUntilNewLine(byteInterval.First, filePath, out lastByte);
                         lastByte++;
                     }
+
+                    if (lastByte >= byteInterval.Second)
+                    {
+                        return result;
+                    }
+
                     stringBuilder.Append(readByteInterval(new PADIMapNoReduce.Pair<long, long>(lastByte, fileSize), filePath));
                 }
                 else //middle split
@@ -67,6 +73,12 @@ namespace Client
                         readUntilNewLine(byteInterval.First, filePath, out lastByte);
                         lastByte++;
                     }
+
+                    if (lastByte >= byteInterval.Second)
+                    {
+                        return result;
+                    }
+
                     stringBuilder.Append(readByteInterval(new PADIMapNoReduce.Pair<long, long>(lastByte, byteInterval.Second), filePath));
                     if (!stringBuilder.ToString().EndsWith("\n"))
                     {
