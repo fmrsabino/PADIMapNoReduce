@@ -2,39 +2,24 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
-using System.Runtime.Remoting;
-using System.Runtime.Remoting.Channels;
-using System.Runtime.Remoting.Channels.Tcp;
 using System.Text;
 
 namespace Client
 {
     class Client : MarshalByRefObject, PADIMapNoReduce.IClient
     {
-        public int Client_PORT = 5000;
-        public String worker_url;
-        public const string MAP_FUNC_LOCATION = "..\\..\\..\\LibMapper\\bin\\Debug\\LibMapper.dll";
-        public const string MAP_FUNC_CLASS_NAME = "Mapper";
-        public UserLevelApp userApp;
-        //ESTE PATH ESTÀ AQUI PARA POREM O CAMINHO CERTO NO TERMINAL
-        public const string INPUT_FILE_PATH = "..\\..\\..\\test.txt";         
+        public const string CLIENT_OBJECT_ID = "C";
+        private string entryUrl;
+        private long clientPort; 
+        
         //public String inputFilePath;
-        public String outputFolderPath;
+        public string outputFolderPath;
         public int counterOutput = 0;
 
-        public Client() { }
-
-        public Client(string worker, UserLevelApp userApp)
+        public Client(string worker, long clientPort)
         {
-            worker_url = worker;
-            this.userApp = userApp;
-
-            TcpChannel channel = new TcpChannel(Client_PORT);
-            ChannelServices.RegisterChannel(channel, true);
-            RemotingConfiguration.RegisterWellKnownServiceType(
-                typeof(Client),
-                "Client",
-                WellKnownObjectMode.Singleton);
+            entryUrl = worker;
+            this.clientPort = clientPort;
         }
 
         public List<string> processBytes(PADIMapNoReduce.Pair<long, long> byteInterval)
@@ -44,7 +29,7 @@ namespace Client
             List<string> result = new List<string>();            
             StringBuilder stringBuilder = new StringBuilder();
 
-            long fileSize = new FileInfo(INPUT_FILE_PATH).Length;
+            long fileSize = new FileInfo(UserLevelApp.INPUT_FILE_PATH).Length;
             if (byteInterval.First == 0 && byteInterval.Second == fileSize)
             {
                 stringBuilder.Append(readByteInterval(byteInterval));
@@ -105,7 +90,7 @@ namespace Client
         private char getCharFromBytePosition(long bytePos)
         {
             byte[] bytes = new byte[1];
-            BinaryReader reader = new BinaryReader(new FileStream(INPUT_FILE_PATH, FileMode.Open));
+            BinaryReader reader = new BinaryReader(new FileStream(UserLevelApp.INPUT_FILE_PATH, FileMode.Open));
 
             reader.BaseStream.Seek(bytePos, SeekOrigin.Begin);
             reader.Read(bytes, 0, bytes.Length);
@@ -124,7 +109,7 @@ namespace Client
             }
 
             byte[] bytes = new byte[byteInterval.Second - byteInterval.First + 1];
-            BinaryReader reader = new BinaryReader(new FileStream(INPUT_FILE_PATH, FileMode.Open));
+            BinaryReader reader = new BinaryReader(new FileStream(UserLevelApp.INPUT_FILE_PATH, FileMode.Open));
 
             reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
             reader.Read(bytes, 0, bytes.Length);
@@ -138,8 +123,8 @@ namespace Client
         private string readUntilNewLine(long startByte, out long endByte)
         {
             StringBuilder sb = new StringBuilder();
-            BinaryReader reader = new BinaryReader(new FileStream(INPUT_FILE_PATH, FileMode.Open));
-            long fileSize = new FileInfo(INPUT_FILE_PATH).Length;
+            BinaryReader reader = new BinaryReader(new FileStream(UserLevelApp.INPUT_FILE_PATH, FileMode.Open));
+            long fileSize = new FileInfo(UserLevelApp.INPUT_FILE_PATH).Length;
             byte[] bytes = new byte[20];
 
             long newLinePos = -1;
@@ -175,23 +160,18 @@ namespace Client
             this.outputFolderPath = outputFolderPath;
             try
             {
-                byte[] mapperCode = File.ReadAllBytes(MAP_FUNC_LOCATION);
+                byte[] mapperCode = File.ReadAllBytes(UserLevelApp.MAP_FUNC_LOCATION);
                 PADIMapNoReduce.IJobTracker jobTracker =
-                   (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), worker_url);
-                jobTracker.registerJob(INPUT_FILE_PATH, splitsInputFormatted, outputFolderPath, fileSizeInputFormatted, "tcp://localhost:" + Client_PORT + "/Client",
-                    mapperCode, MAP_FUNC_CLASS_NAME);
+                   (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), entryUrl);
+                jobTracker.registerJob(UserLevelApp.INPUT_FILE_PATH, splitsInputFormatted, outputFolderPath, fileSizeInputFormatted,
+                    "tcp://localhost:" + clientPort + "/" + CLIENT_OBJECT_ID,
+                    mapperCode, UserLevelApp.MAP_FUNC_CLASS_NAME);
             }
             catch (SocketException)
             {
                 System.Console.WriteLine("Could not locate server");
             }
-
         }
-
-        public void concludedJob() {
-            userApp.execute();
-        }
-
 
         public void receiveProcessData(byte[] output)
         {

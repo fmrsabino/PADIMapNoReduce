@@ -6,6 +6,8 @@ namespace Worker
 {
     class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
+        public const string WORKER_OBJECT_ID = "W";
+
         private List<string> workers = new List<string>();
         private Queue<PADIMapNoReduce.Pair<long, long>> jobQueue;
 
@@ -47,7 +49,7 @@ namespace Worker
             }
         }
 
-        public bool map(List<string> lines)
+        private bool map(List<string> lines)
         {
             Assembly assembly = Assembly.Load(mapperCode);
             // Walk through each type in the assembly looking for our class
@@ -73,7 +75,7 @@ namespace Worker
 
                             IList<KeyValuePair<string, string>> tempResult = (IList<KeyValuePair<string, string>>)resultObject;
                             //Can't join two ILists :(
-                            foreach (KeyValuePair<string, string> p in tempResult) 
+                            foreach (KeyValuePair<string, string> p in tempResult)
                             {
                                 result.Add(p);
                             }
@@ -130,8 +132,8 @@ namespace Worker
                     //No more work to distribute
                     break;
                 }
-                PADIMapNoReduce.IWorker worker = 
-                    (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/Worker");
+                PADIMapNoReduce.IWorker worker =
+                    (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/" + WORKER_OBJECT_ID);
                 worker.setup(mapperCode, mapperClassName, clientUrl);
                 worker.work(jobQueue.Dequeue());
             }
