@@ -7,29 +7,9 @@ namespace Client
 {
     class UserLevelApp
     {
-        //Port Range for Client: 10001-19999
-        public const int CLIENT_PORT = 10001;
-        public const string INPUT_FILE_PATH = "..\\..\\..\\test.txt";
-        public const string MAP_FUNC_LOCATION = "..\\..\\..\\LibMapper\\bin\\Debug\\LibMapper.dll";
-        public const string MAP_FUNC_CLASS_NAME = "Mapper";
-        
         public string inputFilePath, outputFolderPath;
         public int splitsInputFormatted;
-       
-        private string worker_url = "tcp://localhost:30001/W";
         private Client client;
-
-        public UserLevelApp()
-        {
-            client = new Client(worker_url, CLIENT_PORT);
-
-            TcpChannel channel = new TcpChannel(CLIENT_PORT);
-            ChannelServices.RegisterChannel(channel, true);
-            RemotingServices.Marshal(
-                client,
-                Client.CLIENT_OBJECT_ID,
-                typeof(Client));
-        }
 
         public void getInputFile()
         {
@@ -66,7 +46,7 @@ namespace Client
 
         public void execute()
         {
-            while (true)
+            /*while (true)
             {
                 //getInputFile();
                 getNumberSplits();
@@ -78,7 +58,7 @@ namespace Client
                 System.Console.WriteLine("===============================");
                 System.Console.WriteLine("===============================");
                 System.Console.WriteLine("");
-            }
+            }*/
         }
     }
 }

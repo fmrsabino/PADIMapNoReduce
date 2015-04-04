@@ -14,15 +14,17 @@ namespace Worker
         private byte[] mapperCode;
         private string mapperClass;
         private string clientUrl;
+        private string filePath;
         private bool workerSetup = false;
 
         /**** WorkerImpl ****/
-        public void setup(byte[] code, string className, string clientUrl)
+        public void setup(byte[] code, string className, string clientUrl, string filePath)
         {
             Console.Out.WriteLine("Received code for class " + className);
             mapperCode = code;
             mapperClass = className;
             this.clientUrl = clientUrl;
+            this.filePath = filePath;
             workerSetup = true;
         }
 
@@ -34,7 +36,7 @@ namespace Worker
                 PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
 
-                List<string> resultLines = client.processBytes(byteInterval);
+                List<string> resultLines = client.processBytes(byteInterval, filePath);
                 System.Console.WriteLine("========= RESULT ==========");
                 foreach (string s in resultLines)
                 {
@@ -134,7 +136,7 @@ namespace Worker
                 }
                 PADIMapNoReduce.IWorker worker =
                     (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/" + WORKER_OBJECT_ID);
-                worker.setup(mapperCode, mapperClassName, clientUrl);
+                worker.setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
                 worker.work(jobQueue.Dequeue());
             }
         }

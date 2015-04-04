@@ -88,7 +88,6 @@
             // 
             // textBox3
             // 
-            this.textBox3.Enabled = false;
             this.textBox3.Location = new System.Drawing.Point(113, 118);
             this.textBox3.Name = "textBox3";
             this.textBox3.Size = new System.Drawing.Size(198, 20);
@@ -115,7 +114,6 @@
             // 
             // textBox4
             // 
-            this.textBox4.Enabled = false;
             this.textBox4.Location = new System.Drawing.Point(113, 144);
             this.textBox4.Name = "textBox4";
             this.textBox4.Size = new System.Drawing.Size(198, 20);
@@ -158,7 +156,6 @@
             // 
             // browseInputFileBtn
             // 
-            this.browseInputFileBtn.Enabled = false;
             this.browseInputFileBtn.Location = new System.Drawing.Point(317, 116);
             this.browseInputFileBtn.Name = "browseInputFileBtn";
             this.browseInputFileBtn.Size = new System.Drawing.Size(75, 23);
@@ -169,7 +166,6 @@
             // 
             // OutputDrirectoryBrowseBtn
             // 
-            this.OutputDrirectoryBrowseBtn.Enabled = false;
             this.OutputDrirectoryBrowseBtn.Location = new System.Drawing.Point(317, 142);
             this.OutputDrirectoryBrowseBtn.Name = "OutputDrirectoryBrowseBtn";
             this.OutputDrirectoryBrowseBtn.Size = new System.Drawing.Size(75, 23);

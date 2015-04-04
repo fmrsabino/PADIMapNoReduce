@@ -16,15 +16,14 @@ namespace PADIMapNoReduce {
 
     public interface IWorker : IJobTracker
     {
-        void setup(byte[] code, string className, string clientUrl);
+        void setup(byte[] code, string className, string clientUrl, string filePath);
         void work(Pair<long, long> byteInterval);
     }
 
     public interface IClient
     {
         // Receives bytes and returns the lines corresponding to those bytes
-        List<string> processBytes(Pair<long, long> byteInterval);
-
+        List<string> processBytes(Pair<long, long> byteInterval, string filePath);
         //Receives processed data from workers
         void receiveProcessData(byte[] output);
     }

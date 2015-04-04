@@ -72,10 +72,7 @@ namespace Client
                 Client.CLIENT_OBJECT_ID,
                 typeof(Client));
 
-            textBox3.Enabled = true;
-            textBox4.Enabled = true;
-            browseInputFileBtn.Enabled = true;
-            OutputDrirectoryBrowseBtn.Enabled = true;
+            
             button2.Enabled = true;
         }
 
