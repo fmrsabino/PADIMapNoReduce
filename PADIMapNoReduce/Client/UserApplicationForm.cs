@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
-using System.Windows.Forms;
 using System.IO;
+using System.Runtime.Remoting;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Tcp;
+using System.Windows.Forms;
 
 namespace Client
 {
@@ -51,7 +50,7 @@ namespace Client
             DialogResult dialogResult = OutputDirectoryDialog.ShowDialog();
             if (dialogResult == DialogResult.OK)
             {
-                textBox4.Text = inputFile.FileName;
+                textBox4.Text = OutputDirectoryDialog.SelectedPath;
             }
         }
 
@@ -62,9 +61,16 @@ namespace Client
 
         private void button1_Click(object sender, EventArgs e)
         {
-            long clientPort = (long) numericUpDown1.Value;
+            int clientPort = (int) numericUpDown1.Value;
             string entryUrl = "tcp://localhost:" + numericUpDown2.Value + "/W";
             client = new Client(entryUrl, clientPort);
+
+            TcpChannel channel = new TcpChannel(clientPort);
+            ChannelServices.RegisterChannel(channel, true);
+            RemotingServices.Marshal(
+                client,
+                Client.CLIENT_OBJECT_ID,
+                typeof(Client));
 
             textBox3.Enabled = true;
             textBox4.Enabled = true;
@@ -89,7 +95,43 @@ namespace Client
 
             long fileSize = new FileInfo(inputFilePath).Length;
 
-            client.submitJob(inputFilePath, splits, outputFolderPath, fileSize);
+            string dllLocation = "";
+            if (dllLocationValue.Text.Length > 0)
+            {
+                dllLocation = dllLocationValue.Text;
+            }
+
+            string dllClassName = "";
+            if (classNameValue.Text.Length > 0)
+            {
+                dllClassName = classNameValue.Text;
+            }
+
+            client.submitJob(inputFilePath, splits, outputFolderPath, fileSize, dllLocation, dllClassName);
+        }
+
+        private void label7_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label8_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dllBrowseBtn_Click(object sender, EventArgs e)
+        {
+            DialogResult dialogResult = dllLocationDialog.ShowDialog();
+            if (dialogResult == DialogResult.OK)
+            {
+                dllLocationValue.Text = dllLocationDialog.FileName;
+            }
+        }
+
+        private void classNameValue_TextChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

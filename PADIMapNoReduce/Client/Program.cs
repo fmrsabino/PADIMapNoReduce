@@ -8,13 +8,13 @@ namespace Client
         [STAThread]
         static void Main(string[] args)
         {
-            /*Application.EnableVisualStyles();
+            Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new UserApplicationForm());*/
+            Application.Run(new UserApplicationForm());
 
-            Console.Title = "Client";
+            /*Console.Title = "Client";
             UserLevelApp userApplication = new UserLevelApp();
-            userApplication.execute();
+            userApplication.execute();*/
         }
     }
 }

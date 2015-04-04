@@ -45,6 +45,12 @@
             this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
             this.numericUpDown2 = new System.Windows.Forms.NumericUpDown();
             this.numericUpDown3 = new System.Windows.Forms.NumericUpDown();
+            this.label7 = new System.Windows.Forms.Label();
+            this.dllLocationValue = new System.Windows.Forms.TextBox();
+            this.dllBrowseBtn = new System.Windows.Forms.Button();
+            this.label8 = new System.Windows.Forms.Label();
+            this.classNameValue = new System.Windows.Forms.TextBox();
+            this.dllLocationDialog = new System.Windows.Forms.OpenFileDialog();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown3)).BeginInit();
@@ -137,7 +143,7 @@
             // button2
             // 
             this.button2.Enabled = false;
-            this.button2.Location = new System.Drawing.Point(113, 211);
+            this.button2.Location = new System.Drawing.Point(113, 282);
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(198, 23);
             this.button2.TabIndex = 12;
@@ -224,15 +230,79 @@
             -1966660860,
             0,
             0});
+            this.numericUpDown3.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
             this.numericUpDown3.Name = "numericUpDown3";
             this.numericUpDown3.Size = new System.Drawing.Size(198, 20);
             this.numericUpDown3.TabIndex = 17;
+            this.numericUpDown3.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(25, 219);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(71, 13);
+            this.label7.TabIndex = 18;
+            this.label7.Text = "DLL Location";
+            this.label7.Click += new System.EventHandler(this.label7_Click);
+            // 
+            // dllLocationValue
+            // 
+            this.dllLocationValue.Location = new System.Drawing.Point(113, 216);
+            this.dllLocationValue.Name = "dllLocationValue";
+            this.dllLocationValue.Size = new System.Drawing.Size(198, 20);
+            this.dllLocationValue.TabIndex = 19;
+            // 
+            // dllBrowseBtn
+            // 
+            this.dllBrowseBtn.Location = new System.Drawing.Point(317, 214);
+            this.dllBrowseBtn.Name = "dllBrowseBtn";
+            this.dllBrowseBtn.Size = new System.Drawing.Size(75, 23);
+            this.dllBrowseBtn.TabIndex = 20;
+            this.dllBrowseBtn.Text = "Browse";
+            this.dllBrowseBtn.UseVisualStyleBackColor = true;
+            this.dllBrowseBtn.Click += new System.EventHandler(this.dllBrowseBtn_Click);
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(28, 245);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(63, 13);
+            this.label8.TabIndex = 21;
+            this.label8.Text = "Class Name";
+            this.label8.Click += new System.EventHandler(this.label8_Click);
+            // 
+            // classNameValue
+            // 
+            this.classNameValue.Location = new System.Drawing.Point(113, 245);
+            this.classNameValue.Name = "classNameValue";
+            this.classNameValue.Size = new System.Drawing.Size(198, 20);
+            this.classNameValue.TabIndex = 22;
+            this.classNameValue.TextChanged += new System.EventHandler(this.classNameValue_TextChanged);
+            // 
+            // dllLocationDialog
+            // 
+            this.dllLocationDialog.FileName = "dllLocationDialog";
             // 
             // UserApplicationForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(401, 249);
+            this.ClientSize = new System.Drawing.Size(410, 317);
+            this.Controls.Add(this.classNameValue);
+            this.Controls.Add(this.label8);
+            this.Controls.Add(this.dllBrowseBtn);
+            this.Controls.Add(this.dllLocationValue);
+            this.Controls.Add(this.label7);
             this.Controls.Add(this.numericUpDown3);
             this.Controls.Add(this.numericUpDown2);
             this.Controls.Add(this.numericUpDown1);
@@ -277,5 +347,11 @@
         private System.Windows.Forms.NumericUpDown numericUpDown1;
         private System.Windows.Forms.NumericUpDown numericUpDown2;
         private System.Windows.Forms.NumericUpDown numericUpDown3;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.TextBox dllLocationValue;
+        private System.Windows.Forms.Button dllBrowseBtn;
+        private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.TextBox classNameValue;
+        private System.Windows.Forms.OpenFileDialog dllLocationDialog;
     }
 }

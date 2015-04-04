@@ -155,17 +155,18 @@ namespace Client
             return sb.ToString();
         }
 
-        public void submitJob(string inputFilePath, int splitsInputFormatted, string outputFolderPath, long fileSizeInputFormatted)
+        public void submitJob(string inputFilePath, int splitsInputFormatted, string outputFolderPath, long fileSizeInputFormatted,
+            string mapDllLocation, string mapClassName)
         {
             this.outputFolderPath = outputFolderPath;
             try
             {
-                byte[] mapperCode = File.ReadAllBytes(UserLevelApp.MAP_FUNC_LOCATION);
+                byte[] mapperCode = File.ReadAllBytes(mapDllLocation);
                 PADIMapNoReduce.IJobTracker jobTracker =
                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), entryUrl);
                 jobTracker.registerJob(UserLevelApp.INPUT_FILE_PATH, splitsInputFormatted, outputFolderPath, fileSizeInputFormatted,
                     "tcp://localhost:" + clientPort + "/" + CLIENT_OBJECT_ID,
-                    mapperCode, UserLevelApp.MAP_FUNC_CLASS_NAME);
+                    mapperCode, mapClassName);
             }
             catch (SocketException)
             {

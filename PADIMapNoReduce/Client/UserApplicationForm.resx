@@ -123,4 +123,7 @@
   <metadata name="OutputDirectoryDialog.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>109, 20</value>
   </metadata>
+  <metadata name="dllLocationDialog.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>285, 20</value>
+  </metadata>
 </root>

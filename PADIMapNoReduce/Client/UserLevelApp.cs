@@ -73,7 +73,7 @@ namespace Client
                 //getOutputFolder();
 
                 long fileSize = new FileInfo(INPUT_FILE_PATH).Length;
-                client.submitJob(inputFilePath, splitsInputFormatted, outputFolderPath, fileSize);
+                client.submitJob(inputFilePath, splitsInputFormatted, outputFolderPath, fileSize, MAP_FUNC_LOCATION, MAP_FUNC_CLASS_NAME);
 
                 System.Console.WriteLine("===============================");
                 System.Console.WriteLine("===============================");
