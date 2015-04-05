@@ -10,11 +10,11 @@ namespace Client
     {
         public const string CLIENT_OBJECT_ID = "C";
         private string entryUrl;
-        private long clientPort; 
-        
+        private long clientPort;
+
         //public String inputFilePath;
         public string outputFolderPath;
-        public int counterOutput = 0;
+        public UserApplicationForm userApp;
 
         public Client(string worker, long clientPort)
         {
@@ -26,7 +26,7 @@ namespace Client
         {
             System.Console.WriteLine("Received request for bytes from " + byteInterval.First + " to " + byteInterval.Second);
 
-            List<string> result = new List<string>();            
+            List<string> result = new List<string>();
             StringBuilder stringBuilder = new StringBuilder();
 
             long fileSize = new FileInfo(filePath).Length;
@@ -43,7 +43,7 @@ namespace Client
                     if (!stringBuilder.ToString().EndsWith("\n"))
                     {
                         stringBuilder.Append(readUntilNewLine(byteInterval.Second + 1, filePath, out lastByte));
-                    }   
+                    }
                 }
                 else if (byteInterval.Second == fileSize) //lastSplit
                 {
@@ -89,7 +89,7 @@ namespace Client
             System.Console.WriteLine(stringBuilder.ToString());
 
             string finalString = stringBuilder.ToString();
-            string[] lines = finalString.Split(new string[] {Environment.NewLine}, System.StringSplitOptions.RemoveEmptyEntries);
+            string[] lines = finalString.Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
             foreach (string line in lines)
             {
                 result.Add(line);
@@ -126,7 +126,7 @@ namespace Client
             reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
             reader.Read(bytes, 0, bytes.Length);
             string text = Encoding.UTF8.GetString(bytes);
-            
+
             reader.Close();
             return text;
         }
@@ -186,13 +186,16 @@ namespace Client
             }
         }
 
-        public void receiveProcessData(byte[] output)
+        public void receiveProcessData(string output, int n)
         {
-            counterOutput++;
-            String outputFilePath = outputFolderPath + "/" + counterOutput + ".out";
-            FileStream fs = File.Create(outputFilePath);
-            fs.Write(output, 0, output.Length);
+            String outputFilePath = outputFolderPath + "/" + n + ".out";
+            System.IO.File.WriteAllText(outputFilePath, output);
         }
 
+        public void jobConcluded()
+        {
+            userApp.enableNewJob();
+
+        }
     }
 }

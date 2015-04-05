@@ -10,7 +10,7 @@ namespace Worker
         public const string WORKER_OBJECT_ID = "W";
 
         private List<string> workers = new List<string>();
-        private Queue<PADIMapNoReduce.Pair<long, long>> jobQueue;
+        private Queue<LibPADIMapNoReduce.FileSplits> jobQueue;
 
         private byte[] mapperCode;
         private string mapperClass;
@@ -29,8 +29,9 @@ namespace Worker
             workerSetup = true;
         }
 
-        public void work(PADIMapNoReduce.Pair<long, long> byteInterval)
+        public void work(LibPADIMapNoReduce.FileSplits fileSplits)
         {
+            PADIMapNoReduce.Pair<long, long> byteInterval = fileSplits.pair;
             Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
             if (workerSetup)
             {
@@ -44,7 +45,8 @@ namespace Worker
                     System.Console.WriteLine(s);
                 }
                 System.Console.WriteLine("===========================");
-                map(resultLines);
+                string result = map(resultLines);
+                client.receiveProcessData(result, fileSplits.nrSplits);
             }
             else
             {
@@ -52,7 +54,7 @@ namespace Worker
             }
         }
 
-        private bool map(List<string> lines)
+        private string map(List<string> lines)
         {
             Assembly assembly = Assembly.Load(mapperCode);
             // Walk through each type in the assembly looking for our class
@@ -86,11 +88,14 @@ namespace Worker
                         }
 
                         Console.WriteLine("Map call result was: ");
+                        string output = "";
                         foreach (KeyValuePair<string, string> p in result)
                         {
-                            Console.WriteLine("key: " + p.Key + ", value: " + p.Value);
+                            string format = "key: " + p.Key + ", value: " + p.Value;
+                            Console.WriteLine(format);
+                            output += format + Environment.NewLine;
                         }
-                        return true;
+                        return output;
                     }
                 }
             }
@@ -108,7 +113,7 @@ namespace Worker
 
             long splitBytes = nBytes / nSplits;
 
-            jobQueue = new Queue<PADIMapNoReduce.Pair<long, long>>();
+            jobQueue = new Queue<LibPADIMapNoReduce.FileSplits>();
 
             for (int i = 0; i < nSplits; i++)
             {
@@ -124,21 +129,27 @@ namespace Worker
                     System.Console.WriteLine("Added split: " + pair.First + " to " + pair.Second);
                 }
 
-                jobQueue.Enqueue(pair);
+
+                jobQueue.Enqueue(new LibPADIMapNoReduce.FileSplits(i, pair));
             }
 
             //Distribute to each worker one split
             foreach (string workerUrl in workers)
             {
+                //System.Console.WriteLine("CENAS " + jobQueue.Count);
+
                 if (jobQueue.Count == 0)
                 {
-                    //No more work to distribute
+                   // System.Console.WriteLine("NUNCA CA CHEGAS?");
+                    PADIMapNoReduce.IClient client =
+                   (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
+                    client.jobConcluded();
                     break;
                 }
                 PADIMapNoReduce.IWorker worker =
                     (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/" + WORKER_OBJECT_ID);
                 worker.setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
-                
+
                 Thread t = new Thread(this.sendWork);
                 t.Start(worker);
             }
@@ -151,6 +162,7 @@ namespace Worker
                 ((PADIMapNoReduce.IWorker)worker).work(jobQueue.Dequeue());
             }
         }
+
 
         public void registerWorker(string src)
         {
