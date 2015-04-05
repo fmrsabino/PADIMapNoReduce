@@ -36,6 +36,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FileSplits.cs" />
     <Compile Include="Interfaces.cs" />
     <Compile Include="Pair.cs" />
   </ItemGroup>

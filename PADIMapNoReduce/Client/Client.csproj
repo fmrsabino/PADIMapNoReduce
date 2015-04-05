@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{65FA6948-758D-4D5C-B1EF-1C3F699A8BE4}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Client</RootNamespace>
     <AssemblyName>Client</AssemblyName>
@@ -31,13 +31,24 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Remoting" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="UserApplicationForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UserApplicationForm.Designer.cs">
+      <DependentUpon>UserApplicationForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="UserLevelApp.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="Program.cs" />
@@ -48,6 +59,11 @@
       <Project>{2d129022-0922-40c3-9987-17789e3a225f}</Project>
       <Name>LibPADIMapNoReduce</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="UserApplicationForm.resx">
+      <DependentUpon>UserApplicationForm.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

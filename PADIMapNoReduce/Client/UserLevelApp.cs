@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
+using System.Runtime.Remoting;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Tcp;
 
 namespace Client
 {
@@ -9,13 +9,7 @@ namespace Client
     {
         public string inputFilePath, outputFolderPath;
         public int splitsInputFormatted;
-        string worker_url = "tcp://localhost:1000/Worker";
-        Client client;
-
-        public UserLevelApp()
-        {
-            client = new Client(worker_url, this);
-        }
+        //private Client client;
 
         public void getInputFile()
         {
@@ -50,22 +44,21 @@ namespace Client
             }
         }
 
-        public void createClient()
-        {
-            long fileSize = new FileInfo(inputFilePath).Length;
-            client.submitJob(inputFilePath, splitsInputFormatted, outputFolderPath, fileSize);
-
-            System.Console.WriteLine("===============================");
-            System.Console.WriteLine("===============================");
-            System.Console.WriteLine("");
-        }
-
         public void execute()
         {
-            getInputFile();
-            getNumberSplits();
-            getOutputFolder();
-            createClient();
+            /*while (true)
+            {
+                //getInputFile();
+                getNumberSplits();
+                //getOutputFolder();
+
+                long fileSize = new FileInfo(INPUT_FILE_PATH).Length;
+                client.submitJob(inputFilePath, splitsInputFormatted, outputFolderPath, fileSize, MAP_FUNC_LOCATION, MAP_FUNC_CLASS_NAME);
+
+                System.Console.WriteLine("===============================");
+                System.Console.WriteLine("===============================");
+                System.Console.WriteLine("");
+            }*/
         }
     }
 }

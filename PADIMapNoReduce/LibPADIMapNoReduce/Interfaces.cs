@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using LibPADIMapNoReduce;
+using System.Collections.Generic;
+using System.IO;
 
 namespace PADIMapNoReduce {
     public interface IMapper
@@ -15,19 +17,18 @@ namespace PADIMapNoReduce {
 
     public interface IWorker : IJobTracker
     {
-        void setup(byte[] code, string className, string clientUrl);
-        void work(Pair<long, long> byteInterval);
+        void setup(byte[] code, string className, string clientUrl, string filePath);
+        void work(FileSplits fileSplits);
     }
 
     public interface IClient
     {
         // Receives bytes and returns the lines corresponding to those bytes
-
-        List<string> processBytes(Pair<long, long> byteInterval);
-
-        //Receives processedata from workers
-        void receiveProcessData();
-
+        List<string> processBytes(Pair<long, long> byteInterval, string filePath);
+        //Receives processed data from workers
+        void receiveProcessData(string output, int nrSplit);
+        //Receives notification from JobTracker that job has concluded
+        void jobConcluded();
     }
 
     public interface IPuppetMaster

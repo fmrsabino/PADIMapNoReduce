@@ -7,11 +7,11 @@ namespace Worker
 {
     class Program
     {
-        public const int JOB_TRACKER_PORT = 1000;
+        public const int JOB_TRACKER_PORT = 30001;
 
         static void Main(string[] args)
         {
-            System.Console.WriteLine("Port to register worker (1000 to register JobTracker): ");
+            System.Console.WriteLine("Port to register worker (30001 to register JobTracker): ");
 
             string portInput = System.Console.ReadLine();
             int portInputFormatted;
@@ -27,7 +27,7 @@ namespace Worker
             ChannelServices.RegisterChannel(channel, true);
             RemotingConfiguration.RegisterWellKnownServiceType(
                 typeof(Worker),
-                "Worker",
+                Worker.WORKER_OBJECT_ID,
                 WellKnownObjectMode.Singleton);
 
             if (portInputFormatted == JOB_TRACKER_PORT)
@@ -40,11 +40,11 @@ namespace Worker
                 Console.Title = "Worker - " + "tcp://localhost:" + portInputFormatted;
                 System.Console.WriteLine("Worker registred");
                 PADIMapNoReduce.IJobTracker jobTracker =
-                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:" + JOB_TRACKER_PORT + "/Worker");
+                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:" + JOB_TRACKER_PORT + "/" + Worker.WORKER_OBJECT_ID);
                 jobTracker.registerWorker("tcp://localhost:" + portInputFormatted);
             }
 
-            System.Console.WriteLine("<enter> para sair...");
+            System.Console.WriteLine("<enter> to exit...");
             System.Console.ReadLine();
         }
     }
