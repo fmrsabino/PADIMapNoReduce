@@ -19,13 +19,12 @@ namespace PuppetMaster
     {
         string puppetMasterURL;
         List<string> puppetMasters;
-        List<Dictionary<int, string>> workers;
         List<string> commands;
 
         public delegate void MockStartWorker(int id, string serviceURL, string entryURL);
         public MockStartWorker delegateMockStartWorker;
 
-        public PuppetMasterForm(int port)
+        public PuppetMasterForm(int port, string _workerExecutablePath)
         {
             InitializeComponent();
 
@@ -33,17 +32,19 @@ namespace PuppetMaster
             this.Text = "Puppet Master running on: " + puppetMasterURL;
 
             puppetMasters = new List<string>();
-            workers = new List<Dictionary<int, string>>();
             commands = new List<string>();
+
+            string workerExecutablePath = " ..\\..\\..\\Worker\\bin\\Debug\\Worker.exe";
+            workerExecutablePath = _workerExecutablePath;
 
             delegateMockStartWorker = new MockStartWorker(mockStartWorker);
 
             TcpChannel receiveChannel = new TcpChannel(Convert.ToInt32(port));
             ChannelServices.RegisterChannel(receiveChannel, true);
-            RemotingConfiguration.RegisterWellKnownServiceType(
-                typeof(PuppetMaster),
-                "PM",
-                WellKnownObjectMode.Singleton);
+
+            PuppetMaster pm = new PuppetMaster(workerExecutablePath);
+
+            RemotingServices.Marshal(pm, "PM");
 
         }
 
@@ -163,12 +164,15 @@ namespace PuppetMaster
                 string PuppetMasterURL = matches[0].Groups[2].Value;
                 string ServiceURL = matches[0].Groups[3].Value;
                 string EntryURL = matches[0].Groups[4].Value;
-                MessageBox.Show("workerId: " + workerId + "\nPuppetMasterURL: " + PuppetMasterURL + "\nServiceURL: " + ServiceURL + "\nEntryURL: " + EntryURL);
 
                 PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
                     typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
 
-                pm.startWorker(workerId, ServiceURL, EntryURL);
+                bool result = pm.startWorker(workerId, ServiceURL, EntryURL);
+                if(!result)
+                {
+                    MessageBox.Show("workerId: " + workerId + "\nPuppetMasterURL: " + PuppetMasterURL + "\nServiceURL: " + ServiceURL + "\nEntryURL: " + EntryURL + "\nFailed to start! A worker with the same id may already exist or something weird may be happening with Windows - protip: Linux");
+                }
 
             }
             catch (Exception e)
@@ -205,7 +209,8 @@ namespace PuppetMaster
             {
                 int seconds = int.Parse(matches[0].Groups[1].Value);
 
-                MessageBox.Show("WAIT - Seconds: " + seconds);
+                //MessageBox.Show("WAIT - Seconds: " + seconds);
+                Thread.Sleep(seconds * 1000);
             }
             catch (Exception e)
             {
