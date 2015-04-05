@@ -74,7 +74,7 @@ namespace Client
                         lastByte++;
                     }
 
-                    if (lastByte >= byteInterval.Second)
+                    if (lastByte > byteInterval.Second)
                     {
                         return result;
                     }
