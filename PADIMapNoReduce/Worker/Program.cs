@@ -7,28 +7,82 @@ namespace Worker
 {
     class Program
     {
-        public const int JOB_TRACKER_PORT = 30001;
+        public const int MAX_RANGE = 39999;
+        public const int MIN_RANGE = 30001;
 
         static void Main(string[] args)
         {
 
             string portInput;
             int portInputFormatted;
-            if (args.Length == 2)
+            int jobTrackerPort;
+            TcpChannel channel;
+
+            if (args.Length == 2 || args.Length == 3)
             {
-                if(args[0].Equals("-p"))
+                if (args[0].Equals("-p"))
                 {
                     portInput = args[1];
-                    if(!int.TryParse(portInput, out portInputFormatted)) {
+                    if (!int.TryParse(portInput, out portInputFormatted))
+                    {
                         System.Console.WriteLine("Invalid port format supplied. Exitting...");
                         return;
                     }
-                } else
+                    if (portInputFormatted >= MIN_RANGE && portInputFormatted <= MAX_RANGE)
+                    {
+                        try
+                        {
+                            channel = new TcpChannel(portInputFormatted);
+                            ChannelServices.RegisterChannel(channel, true);
+                            RemotingConfiguration.RegisterWellKnownServiceType(
+                                typeof(Worker),
+                                Worker.WORKER_OBJECT_ID,
+                                WellKnownObjectMode.Singleton);
+                        }
+                        catch (Exception i)
+                        {
+                            System.Console.WriteLine("EXCEPTION: " + i.Message);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        System.Console.WriteLine("Invalid port supplied. Range not supported. Exitting...");
+                        return;
+                    }
+
+                    //WORKER
+                    if (args.Length == 3)
+                    {
+                        try
+                        {
+                            Console.Title = "Worker - " + args[2];
+                            System.Console.WriteLine("Worker registred");
+                            PADIMapNoReduce.IJobTracker jobTracker =
+                                (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), args[2]);
+                            jobTracker.registerWorker("tcp://localhost:" + portInputFormatted);
+                        }
+                        catch (Exception e)
+                        {
+                            System.Console.WriteLine("EXCEPTION: " + e.Message);
+                            return;
+                        }
+                    }
+                    //JOBTRACKER
+                    else
+                    {
+                        System.Console.WriteLine("JobTracker registred");
+                        Console.Title = "JobTracker - " + "tcp://localhost:" + portInputFormatted;
+                    }
+                }
+                else
                 {
                     System.Console.WriteLine("Invalid argument supplied. Exitting...");
                     return;
                 }
-            } else
+            }
+            //SO PARA TESTING    
+            else
             {
                 System.Console.WriteLine("Port to register worker (30001 to register JobTracker): ");
 
@@ -38,31 +92,32 @@ namespace Worker
                     System.Console.WriteLine("Invalid port format. Register port: ");
                     portInput = System.Console.ReadLine();
                 }
-            }
 
-            
+                //DONE: Check exceptions
+                //DONE: Check for port range
+                channel = new TcpChannel(portInputFormatted);
+                ChannelServices.RegisterChannel(channel, true);
+                RemotingConfiguration.RegisterWellKnownServiceType(
+                    typeof(Worker),
+                    Worker.WORKER_OBJECT_ID,
+                    WellKnownObjectMode.Singleton);
 
-            //TODO: Check for port range
-            //TODO: Catch already in use port exception
-            TcpChannel channel = new TcpChannel(portInputFormatted);
-            ChannelServices.RegisterChannel(channel, true);
-            RemotingConfiguration.RegisterWellKnownServiceType(
-                typeof(Worker),
-                Worker.WORKER_OBJECT_ID,
-                WellKnownObjectMode.Singleton);
+                //TESTING
+                jobTrackerPort = 30001;
 
-            if (portInputFormatted == JOB_TRACKER_PORT)
-            {
-                System.Console.WriteLine("JobTracker registred");
-                Console.Title = "JobTracker - " + "tcp://localhost:" + portInputFormatted;
-            }
-            else
-            {
-                Console.Title = "Worker - " + "tcp://localhost:" + portInputFormatted;
-                System.Console.WriteLine("Worker registred");
-                PADIMapNoReduce.IJobTracker jobTracker =
-                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:" + JOB_TRACKER_PORT + "/" + Worker.WORKER_OBJECT_ID);
-                jobTracker.registerWorker("tcp://localhost:" + portInputFormatted);
+                if (portInputFormatted == jobTrackerPort)
+                {
+                    System.Console.WriteLine("JobTracker registred");
+                    Console.Title = "JobTracker - " + "tcp://localhost:" + portInputFormatted;
+                }
+                else
+                {
+                    Console.Title = "Worker - " + "tcp://localhost:" + portInputFormatted;
+                    System.Console.WriteLine("Worker registred");
+                    PADIMapNoReduce.IJobTracker jobTracker =
+                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:" + jobTrackerPort + "/" + Worker.WORKER_OBJECT_ID);
+                    jobTracker.registerWorker("tcp://localhost:" + portInputFormatted);
+                }
             }
 
             System.Console.WriteLine("<enter> to exit...");

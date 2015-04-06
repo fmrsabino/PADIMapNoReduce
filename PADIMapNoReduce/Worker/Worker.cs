@@ -138,22 +138,40 @@ namespace Worker
             for (int i = 0; i < workers.Count; i++)
             {
                 string workerUrl = workers[i];
-                PADIMapNoReduce.IWorker worker =
-                    (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/" + WORKER_OBJECT_ID);
-                worker.setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
+                try
+                {
+                    PADIMapNoReduce.IWorker worker =
+                        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/" + WORKER_OBJECT_ID);
+                    worker.setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
 
-                threads[i] = new ManualResetEvent(false);
-                KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent> pair = new KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent>(worker, threads[i]);
-                Thread t = new Thread(this.sendWork);
-                t.Start(pair);
+                    threads[i] = new ManualResetEvent(false);
+                    KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent> pair =
+                        new KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent>(worker, threads[i]);
+                    Thread t = new Thread(this.sendWork);
+                    t.Start(pair);
+                }
+                catch (Exception e)
+                {
+                    System.Console.WriteLine("EXCEPTION: " + e.Message);
+                    return;
+                }
             }
 
             //wait for all threads to conclude
             WaitHandle.WaitAll(threads);
 
-            PADIMapNoReduce.IClient client =
-            (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
-            client.jobConcluded();
+            try
+            {
+                PADIMapNoReduce.IClient client =
+                (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
+                client.jobConcluded();
+                System.Console.WriteLine("////////////JOB CONCLUDED/////////////////");
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine("EXCEPTION: " + e.Message);
+                return;
+            }
         }
 
         private void sendWork(Object obj)
@@ -177,7 +195,6 @@ namespace Worker
                 }
                 worker.work(job);
             }
-
             //thread "notify" jobtracker that jobqueue is empty
             pair.Value.Set();
         }

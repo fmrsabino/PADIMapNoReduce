@@ -65,15 +65,21 @@ namespace Client
             string entryUrl = "tcp://localhost:" + numericUpDown2.Value + "/W";
             client = new Client(entryUrl, clientPort);
 
-            TcpChannel channel = new TcpChannel(clientPort);
-            ChannelServices.RegisterChannel(channel, true);
-            RemotingServices.Marshal(
-                client,
-                Client.CLIENT_OBJECT_ID,
-                typeof(Client));
+            try
+            {
+                TcpChannel channel = new TcpChannel(clientPort);
+                ChannelServices.RegisterChannel(channel, true);
+                RemotingServices.Marshal(
+                    client,
+                    Client.CLIENT_OBJECT_ID,
+                    typeof(Client));
 
-            
-            button2.Enabled = true;
+                button2.Enabled = true;
+
+            } catch (Exception i){
+                System.Console.WriteLine("EXCEPTION: " + i.Message);
+                Close();
+            }
         }
 
         private void button2_Click(object sender, EventArgs e)
