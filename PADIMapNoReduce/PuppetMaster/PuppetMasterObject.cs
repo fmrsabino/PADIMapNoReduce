@@ -21,19 +21,22 @@ namespace PuppetMaster
 
         public bool startWorker(int id, string serviceURL, string entryURL)
         {
+            Uri serviceURLparsed;
             try
             {
                 workers.Add(id, serviceURL);
+                serviceURLparsed = new Uri(serviceURL);
             } catch (Exception e)
             {
                 // Same id already exists. Not relaunching.
+                // Or serviceURL is not a valid URL
                 return false;
             }
 
             Process p = new Process();
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.FileName = workerExecutablePath;
-            p.StartInfo.Arguments = "-u " + serviceURL;
+            p.StartInfo.Arguments = "-p " + serviceURLparsed.Port;
             return p.Start();
         }
 
