@@ -133,34 +133,53 @@ namespace Worker
                 jobQueue.Enqueue(new LibPADIMapNoReduce.FileSplits(i, pair));
             }
 
+            ManualResetEvent[] threads = new ManualResetEvent[workers.Count];
             //Distribute to each worker one split
-            foreach (string workerUrl in workers)
+            for (int i = 0; i < workers.Count; i++)
             {
-                //System.Console.WriteLine("CENAS " + jobQueue.Count);
-
-                if (jobQueue.Count == 0)
-                {
-                   // System.Console.WriteLine("NUNCA CA CHEGAS?");
-                    PADIMapNoReduce.IClient client =
-                   (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
-                    client.jobConcluded();
-                    break;
-                }
+                string workerUrl = workers[i];
                 PADIMapNoReduce.IWorker worker =
                     (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/" + WORKER_OBJECT_ID);
                 worker.setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
 
+                threads[i] = new ManualResetEvent(false);
+                KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent> pair = new KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent>(worker, threads[i]);
                 Thread t = new Thread(this.sendWork);
-                t.Start(worker);
+                t.Start(pair);
             }
+
+            //wait for all threads to conclude
+            WaitHandle.WaitAll(threads);
+
+            PADIMapNoReduce.IClient client =
+            (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
+            client.jobConcluded();
         }
 
-        private void sendWork(object worker)
+        private void sendWork(Object obj)
         {
+            KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent> pair = (KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent>)obj;
+            PADIMapNoReduce.IWorker worker = pair.Key;
+
             while (jobQueue.Count > 0)
             {
-                ((PADIMapNoReduce.IWorker)worker).work(jobQueue.Dequeue());
+                LibPADIMapNoReduce.FileSplits job = null;
+                lock (jobQueue)
+                {
+                    try
+                    {
+                        job = jobQueue.Dequeue();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        break;
+                    }
+                }
+                worker.work(job);
             }
+
+            //thread "notify" jobtracker that jobqueue is empty
+            pair.Value.Set();
         }
 
 
