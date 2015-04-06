@@ -166,7 +166,7 @@ namespace PuppetMaster
                 string EntryURL = matches[0].Groups[4].Value;
 
                 PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
-                    typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
+                    typeof(PADIMapNoReduce.IPuppetMaster), PuppetMasterURL);
 
                 bool result = pm.startWorker(workerId, ServiceURL, EntryURL);
                 if(!result)
