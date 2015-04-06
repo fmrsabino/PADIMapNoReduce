@@ -11,15 +11,36 @@ namespace Worker
 
         static void Main(string[] args)
         {
-            System.Console.WriteLine("Port to register worker (30001 to register JobTracker): ");
 
-            string portInput = System.Console.ReadLine();
+            string portInput;
             int portInputFormatted;
-            while (!int.TryParse(portInput, out portInputFormatted))
+            if (args.Length == 2)
             {
-                System.Console.WriteLine("Invalid port format. Register port: ");
+                if(args[0].Equals("-p"))
+                {
+                    portInput = args[1];
+                    if(!int.TryParse(portInput, out portInputFormatted)) {
+                        System.Console.WriteLine("Invalid port format supplied. Exitting...");
+                        return;
+                    }
+                } else
+                {
+                    System.Console.WriteLine("Invalid argument supplied. Exitting...");
+                    return;
+                }
+            } else
+            {
+                System.Console.WriteLine("Port to register worker (30001 to register JobTracker): ");
+
                 portInput = System.Console.ReadLine();
+                while (!int.TryParse(portInput, out portInputFormatted))
+                {
+                    System.Console.WriteLine("Invalid port format. Register port: ");
+                    portInput = System.Console.ReadLine();
+                }
             }
+
+            
 
             //TODO: Check for port range
             //TODO: Catch already in use port exception
