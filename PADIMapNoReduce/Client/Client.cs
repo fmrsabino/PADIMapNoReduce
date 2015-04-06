@@ -14,7 +14,6 @@ namespace Client
 
         //public String inputFilePath;
         public string outputFolderPath;
-        public UserApplicationForm userApp;
 
         public Client(string worker, long clientPort)
         {
@@ -194,8 +193,7 @@ namespace Client
 
         public void jobConcluded()
         {
-            userApp.enableNewJob();
-
+            System.Console.WriteLine("////////////JOB CONCLUDED/////////////////");
         }
     }
 }

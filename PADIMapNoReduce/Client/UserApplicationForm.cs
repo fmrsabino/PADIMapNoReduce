@@ -103,9 +103,10 @@ namespace Client
             {
                 dllClassName = classNameValue.Text;
             }
-
+           
+            button2.Enabled = false;
             client.submitJob(inputFilePath, splits, outputFolderPath, fileSize, dllLocation, dllClassName);
-           // button2.Enabled = false;
+            button2.Enabled = true;
         }
 
         private void label7_Click(object sender, EventArgs e)
@@ -130,11 +131,6 @@ namespace Client
         private void classNameValue_TextChanged(object sender, EventArgs e)
         {
 
-        }
-
-        public void enableNewJob()
-        {
-            button2.Enabled = true;
         }
     }
 }
