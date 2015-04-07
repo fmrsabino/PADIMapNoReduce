@@ -19,6 +19,8 @@ namespace Worker
         private bool workerSetup = false;
         private string jobTrackerUrl;
         private string workerUrl;
+        private Timer timer;
+        private const long TIME_INTERVAL_IN_MS = 5000;
 
         public override object InitializeLifetimeService()
         {
@@ -44,6 +46,8 @@ namespace Worker
             mapperClass = className;
             this.clientUrl = clientUrl;
             this.filePath = filePath;
+
+            //timer = new Timer(sendImAlive, null, TIME_INTERVAL_IN_MS, Timeout.Infinite);
             workerSetup = true;
         }
 
@@ -120,10 +124,13 @@ namespace Worker
             throw (new System.Exception("could not invoke method"));
         }
 
-        private void sendImAlive()
+        public void sendImAlive(Object state)
         {
             PADIMapNoReduce.IJobTracker jobTracker =
                         (PADIMapNoReduce.IJobTracker) Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+            jobTracker.registerImAlive(workerUrl);
+
+            timer.Change(TIME_INTERVAL_IN_MS, Timeout.Infinite);
         }
 
         /**** JobTrackerImpl ****/
@@ -240,7 +247,7 @@ namespace Worker
 
         public void registerImAlive(string workerUrl)
         {
-
+            Console.WriteLine("I'M ALIVE from " + workerUrl);
         }
     }
 }

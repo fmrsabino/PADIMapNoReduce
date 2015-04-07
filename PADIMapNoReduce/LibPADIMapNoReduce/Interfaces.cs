@@ -1,6 +1,6 @@
 ﻿using LibPADIMapNoReduce;
+using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace PADIMapNoReduce {
     public interface IMapper
@@ -13,12 +13,14 @@ namespace PADIMapNoReduce {
         void registerJob
             (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName);
         bool registerWorker(string src);
+        void registerImAlive(string workerUrl);
     }
 
     public interface IWorker : IJobTracker
     {
         void setup(byte[] code, string className, string clientUrl, string filePath);
         void work(FileSplits fileSplits);
+        void sendImAlive(Object state);
     }
 
     public interface IClient
