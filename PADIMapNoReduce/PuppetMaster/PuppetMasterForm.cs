@@ -12,19 +12,20 @@ using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Threading;
+using System.Diagnostics;
 
 namespace PuppetMaster
 {
     public partial class PuppetMasterForm : Form
     {
-        string puppetMasterURL;
+        string puppetMasterURL, workerExecutablePath, clientExecutablePath;
         List<string> puppetMasters;
         List<string> commands;
 
         public delegate void MockStartWorker(int id, string serviceURL, string entryURL);
         public MockStartWorker delegateMockStartWorker;
 
-        public PuppetMasterForm(int port, string _workerExecutablePath)
+        public PuppetMasterForm(int port, string _workerExecutablePath, string _clientExecutablePath)
         {
             InitializeComponent();
 
@@ -34,8 +35,8 @@ namespace PuppetMaster
             puppetMasters = new List<string>();
             commands = new List<string>();
 
-            string workerExecutablePath = " ..\\..\\..\\Worker\\bin\\Debug\\Worker.exe";
             workerExecutablePath = _workerExecutablePath;
+            clientExecutablePath = _clientExecutablePath;
 
             delegateMockStartWorker = new MockStartWorker(mockStartWorker);
 
@@ -186,6 +187,7 @@ namespace PuppetMaster
 
             try
             {
+                //SUBMIT <ENTRY-URL> <FILE> <OUTPUT> <S> <MAP> <DLL>
                 string EntryURL = matches[0].Groups[1].Value;
                 string File = matches[0].Groups[2].Value;
                 string Output = matches[0].Groups[3].Value;
@@ -193,7 +195,11 @@ namespace PuppetMaster
                 string Map = matches[0].Groups[5].Value;
                 string DLL = matches[0].Groups[6].Value;
 
-                MessageBox.Show("EntryURL: " + EntryURL + "\nFile: " + File + "\nOutput: " + Output + "\nSplits: " + Splits + "\nMap: " + Map + "\nDLL: " + DLL);
+                Process p = new Process();
+                p.StartInfo.UseShellExecute = false;
+                p.StartInfo.FileName = clientExecutablePath;
+                p.StartInfo.Arguments = EntryURL + " " + File + " " + Output + " " + Splits + " " + Map + " " + DLL;
+                p.Start();
             }
             catch (Exception e)
             {
