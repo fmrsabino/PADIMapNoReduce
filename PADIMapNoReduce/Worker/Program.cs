@@ -18,6 +18,7 @@ namespace Worker
             int jobTrackerPort;
             TcpChannel channel;
 
+            //ARGS: -p ownPort [JobTrackerPath]
             if (args.Length == 2 || args.Length == 3)
             {
                 if (args[0].Equals("-p"))
@@ -56,7 +57,7 @@ namespace Worker
                     {
                         try
                         {
-                            Console.Title = "Worker - " + args[2];
+                            Console.Title = "Worker - " + args[1];
                             System.Console.WriteLine("Worker registred");
                             PADIMapNoReduce.IJobTracker jobTracker =
                                 (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), args[2]);

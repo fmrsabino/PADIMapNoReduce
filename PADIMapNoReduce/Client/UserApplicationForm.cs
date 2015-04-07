@@ -11,10 +11,48 @@ namespace Client
     public partial class UserApplicationForm : Form
     {
         private Client client;
+        private const int DEFAULCLIENTPORT = 15555;
+        private int clientPort;
+        private string inputFilePath;
+        private int splits;
+        private string outputFolderPath;
+        private string dllLocation;
+        private string dllClassName;
+        private string entryUrl;
+
         public UserApplicationForm()
         {
             InitializeComponent();
         }
+
+        public UserApplicationForm(string entryUrl, string inputFilePath, string outputPath, int nrSplits, string mapperClassName, string dllPath)
+        {
+            this.clientPort = DEFAULCLIENTPORT;
+            this.entryUrl = entryUrl;
+            this.inputFilePath = inputFilePath;
+            this.outputFolderPath = outputPath;
+            this.splits = nrSplits;
+            this.dllClassName = mapperClassName;
+            this.dllLocation = dllPath;
+            InitializeComponent();
+            Load += new EventHandler(UserApplicationForm_Load);
+        }
+
+        private void UserApplicationForm_Load(object sender, EventArgs e)
+        {
+            textBox3.Text = inputFilePath;
+            textBox1.Text = entryUrl;
+            numericUpDown1.Value = DEFAULCLIENTPORT;
+            numericUpDown3.Value = splits;
+            textBox4.Text = outputFolderPath;
+            dllLocationValue.Text = dllLocation;
+            classNameValue.Text = dllClassName;
+            button2.Enabled = false;
+            button1.Enabled = false;
+            createClient();
+            submitJob();
+        }
+
 
         private void label1_Click(object sender, EventArgs e)
         {
@@ -61,57 +99,13 @@ namespace Client
 
         private void button1_Click(object sender, EventArgs e)
         {
-            int clientPort = (int) numericUpDown1.Value;
-            string entryUrl = "tcp://localhost:" + numericUpDown2.Value + "/W";
-            client = new Client(entryUrl, clientPort);
-
-            try
-            {
-                TcpChannel channel = new TcpChannel(clientPort);
-                ChannelServices.RegisterChannel(channel, true);
-                RemotingServices.Marshal(
-                    client,
-                    Client.CLIENT_OBJECT_ID,
-                    typeof(Client));
-
-                button2.Enabled = true;
-
-            } catch (Exception i){
-                System.Console.WriteLine("EXCEPTION: " + i.Message);
-                Close();
-            }
+            createClient();
+            button2.Enabled = true;
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            string inputFilePath = "";
-            if(textBox3.Text.Length > 0) {
-                inputFilePath = textBox3.Text;
-            }
-            
-            int splits = (int) numericUpDown3.Value;
-
-            string outputFolderPath = "";
-            if(textBox4.Text.Length > 0) {
-                outputFolderPath = textBox4.Text;
-            }
-
-            long fileSize = new FileInfo(inputFilePath).Length;
-
-            string dllLocation = "";
-            if (dllLocationValue.Text.Length > 0)
-            {
-                dllLocation = dllLocationValue.Text;
-            }
-
-            string dllClassName = "";
-            if (classNameValue.Text.Length > 0)
-            {
-                dllClassName = classNameValue.Text;
-            }
-           
-            button2.Enabled = false;
-            client.submitJob(inputFilePath, splits, outputFolderPath, fileSize, dllLocation, dllClassName);
+            submitJob();
             button2.Enabled = true;
         }
 
@@ -138,5 +132,60 @@ namespace Client
         {
 
         }
+
+        private void createClient()
+        {
+            clientPort = (int)numericUpDown1.Value;
+            entryUrl = textBox1.Text;
+            client = new Client(entryUrl, clientPort);
+
+            try
+            {
+                TcpChannel channel = new TcpChannel(clientPort);
+                ChannelServices.RegisterChannel(channel, true);
+                RemotingServices.Marshal(
+                    client,
+                    Client.CLIENT_OBJECT_ID,
+                    typeof(Client));
+            }
+            catch (Exception i)
+            {
+                System.Console.WriteLine("EXCEPTION: " + i.Message);
+                Close();
+            }
+        }
+
+        private void submitJob()
+        {         
+            if (textBox3.Text.Length > 0)
+            {
+                inputFilePath = textBox3.Text;
+            }
+
+            splits = (int)numericUpDown3.Value;
+
+            
+            if (textBox4.Text.Length > 0)
+            {
+                outputFolderPath = textBox4.Text;
+            }
+
+            long fileSize = new FileInfo(inputFilePath).Length;
+
+            if (dllLocationValue.Text.Length > 0)
+            {
+                dllLocation = dllLocationValue.Text;
+            }
+
+            
+            if (classNameValue.Text.Length > 0)
+            {
+                dllClassName = classNameValue.Text;
+            }
+
+            button2.Enabled = false;
+            client.submitJob(inputFilePath, splits, outputFolderPath, fileSize, dllLocation, dllClassName);
+        }
+
     }
 }

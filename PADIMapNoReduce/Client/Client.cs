@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
@@ -175,13 +176,14 @@ namespace Client
             string mapDllLocation, string mapClassName)
         {
             this.outputFolderPath = outputFolderPath;
+
             try
             {
                 byte[] mapperCode = File.ReadAllBytes(mapDllLocation);
                 PADIMapNoReduce.IJobTracker jobTracker =
                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), entryUrl);
                 jobTracker.registerJob(inputFilePath, splitsInputFormatted, outputFolderPath, fileSizeInputFormatted,
-                    "tcp://localhost:" + clientPort + "/" + CLIENT_OBJECT_ID,
+                    "tcp://" + System.Environment.MachineName + ":" + clientPort + "/" + CLIENT_OBJECT_ID,
                     mapperCode, mapClassName);
             }
             catch (SocketException)
