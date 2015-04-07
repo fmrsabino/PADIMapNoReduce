@@ -12,7 +12,7 @@ namespace PADIMapNoReduce {
     {
         void registerJob
             (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName);
-        void registerWorker(string src);
+        bool registerWorker(string src);
     }
 
     public interface IWorker : IJobTracker
@@ -33,9 +33,7 @@ namespace PADIMapNoReduce {
 
     public interface IPuppetMaster
     {
-
         bool startWorker(int id, string serviceURL, string entryURL);
-
     }
 
 }

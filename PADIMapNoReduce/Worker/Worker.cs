@@ -7,7 +7,7 @@ namespace Worker
 {
     class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
-        public const string WORKER_OBJECT_ID = "W";
+        public const string WORKER_OBJECT_URI = "W";
 
         private List<string> workers = new List<string>();
         private Queue<LibPADIMapNoReduce.FileSplits> jobQueue;
@@ -17,10 +17,23 @@ namespace Worker
         private string clientUrl;
         private string filePath;
         private bool workerSetup = false;
+        private string jobTrackerUrl;
+        private string workerUrl;
 
         public override object InitializeLifetimeService()
         {
             return null;
+        }
+
+        public Worker(string jobTrackerUrl)
+        {
+            this.jobTrackerUrl = jobTrackerUrl;
+        }
+
+        public Worker(string workerUrl, string jobTrackerUrl)
+        {
+            this.workerUrl = workerUrl;
+            this.jobTrackerUrl = jobTrackerUrl;
         }
 
         /**** WorkerImpl ****/
@@ -107,6 +120,12 @@ namespace Worker
             throw (new System.Exception("could not invoke method"));
         }
 
+        private void sendImAlive()
+        {
+            PADIMapNoReduce.IJobTracker jobTracker =
+                        (PADIMapNoReduce.IJobTracker) Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+        }
+
         /**** JobTrackerImpl ****/
         public void registerJob
             (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName)
@@ -146,7 +165,7 @@ namespace Worker
                 try
                 {
                     PADIMapNoReduce.IWorker worker =
-                        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl + "/" + WORKER_OBJECT_ID);
+                        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl);
                     worker.setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
 
                     threads[i] = new ManualResetEvent(false);
@@ -204,18 +223,24 @@ namespace Worker
             pair.Value.Set();
         }
 
-
-        public void registerWorker(string src)
+        public bool registerWorker(string workerUrl)
         {
-            if (!workers.Contains(src))
+            if (!workers.Contains(workerUrl))
             {
-                workers.Add(src);
-                System.Console.WriteLine("Registered " + src);
+                workers.Add(workerUrl);
+                System.Console.WriteLine("Registered " + workerUrl);
+                return true;
             }
             else
             {
-                System.Console.WriteLine(src + " is already registered.");
+                System.Console.WriteLine(workerUrl + " is already registered.");
+                return false;
             }
+        }
+
+        public void registerImAlive(string workerUrl)
+        {
+
         }
     }
 }

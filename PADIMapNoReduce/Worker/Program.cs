@@ -12,7 +12,6 @@ namespace Worker
 
         static void Main(string[] args)
         {
-
             string portInput;
             int portInputFormatted;
             int jobTrackerPort;
@@ -31,49 +30,76 @@ namespace Worker
                     }
                     if (portInputFormatted >= MIN_RANGE && portInputFormatted <= MAX_RANGE)
                     {
-                        try
+                        //WORKER
+                        if (args.Length == 3)
                         {
-                            channel = new TcpChannel(portInputFormatted);
-                            ChannelServices.RegisterChannel(channel, true);
-                            RemotingConfiguration.RegisterWellKnownServiceType(
-                                typeof(Worker),
-                                Worker.WORKER_OBJECT_ID,
-                                WellKnownObjectMode.Singleton);
+                            try
+                            {
+                                string workerUrl = "tcp://localhost:" + portInputFormatted + "/" + Worker.WORKER_OBJECT_URI;
+                                string jobTrackerUrl = args[2];
+                                Worker worker = new Worker(workerUrl, jobTrackerUrl);
+
+                                //Publish Worker object
+                                channel = new TcpChannel(portInputFormatted);
+                                ChannelServices.RegisterChannel(channel, true);
+
+                                RemotingServices.Marshal(
+                                    worker,
+                                    Worker.WORKER_OBJECT_URI,
+                                    typeof(PADIMapNoReduce.IWorker));
+
+                                Console.Title = "Worker - " + workerUrl;
+                                
+                                //Register worker in JobTracker
+                                PADIMapNoReduce.IJobTracker jobTracker =
+                                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), args[2]);
+                                if (jobTracker.registerWorker(workerUrl))
+                                {
+                                    System.Console.WriteLine("Worker registred");
+                                }
+                                else
+                                {
+                                    System.Console.WriteLine("Error: Could't register worker");
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                System.Console.WriteLine("EXCEPTION: " + e.Message);
+                                Console.ReadLine();
+                                return;
+                            }
                         }
-                        catch (Exception i)
+                        //JOBTRACKER
+                        else
                         {
-                            System.Console.WriteLine("EXCEPTION: " + i.Message);
-                            return;
+                            try
+                            {
+                                string jobTrackerUrl = "tcp://localhost:" + portInputFormatted + "/" + Worker.WORKER_OBJECT_URI;
+                                Worker worker = new Worker(jobTrackerUrl);
+
+                                //Publish JobTrakcer object
+                                channel = new TcpChannel(portInputFormatted);
+                                ChannelServices.RegisterChannel(channel, true);
+                                RemotingServices.Marshal(
+                                        worker,
+                                        Worker.WORKER_OBJECT_URI,
+                                        typeof(PADIMapNoReduce.IJobTracker));
+
+                                System.Console.WriteLine("JobTracker registred");
+                                Console.Title = "JobTracker - " + "tcp://localhost:" + portInputFormatted;
+                            }
+                            catch (Exception e)
+                            {
+                                System.Console.WriteLine("EXCEPTION: " + e.Message);
+                                Console.ReadLine();
+                                return;
+                            }
                         }
                     }
                     else
                     {
                         System.Console.WriteLine("Invalid port supplied. Range not supported. Exitting...");
                         return;
-                    }
-
-                    //WORKER
-                    if (args.Length == 3)
-                    {
-                        try
-                        {
-                            Console.Title = "Worker - " + args[1];
-                            System.Console.WriteLine("Worker registred");
-                            PADIMapNoReduce.IJobTracker jobTracker =
-                                (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), args[2]);
-                            jobTracker.registerWorker("tcp://localhost:" + portInputFormatted);
-                        }
-                        catch (Exception e)
-                        {
-                            System.Console.WriteLine("EXCEPTION: " + e.Message);
-                            return;
-                        }
-                    }
-                    //JOBTRACKER
-                    else
-                    {
-                        System.Console.WriteLine("JobTracker registred");
-                        Console.Title = "JobTracker - " + "tcp://localhost:" + portInputFormatted;
                     }
                 }
                 else
@@ -98,10 +124,7 @@ namespace Worker
                 //DONE: Check for port range
                 channel = new TcpChannel(portInputFormatted);
                 ChannelServices.RegisterChannel(channel, true);
-                RemotingConfiguration.RegisterWellKnownServiceType(
-                    typeof(Worker),
-                    Worker.WORKER_OBJECT_ID,
-                    WellKnownObjectMode.Singleton);
+                
 
                 //TESTING
                 jobTrackerPort = 30001;
@@ -110,14 +133,32 @@ namespace Worker
                 {
                     System.Console.WriteLine("JobTracker registred");
                     Console.Title = "JobTracker - " + "tcp://localhost:" + portInputFormatted;
+
+                    string jobTrackerUrl = "tcp://localhost:" + portInputFormatted + "/" + Worker.WORKER_OBJECT_URI;
+
+                    Worker worker = new Worker(jobTrackerUrl);
+
+                    RemotingServices.Marshal(
+                        worker,
+                        Worker.WORKER_OBJECT_URI,
+                        typeof(PADIMapNoReduce.IJobTracker));
                 }
                 else
                 {
                     Console.Title = "Worker - " + "tcp://localhost:" + portInputFormatted;
-                    System.Console.WriteLine("Worker registred");
+                    string jobTrackerUrl = "tcp://localhost:" + jobTrackerPort + "/" + Worker.WORKER_OBJECT_URI;
+                    string workerUrl = "tcp://localhost:" + portInputFormatted + "/" + Worker.WORKER_OBJECT_URI;
+
+                    Worker worker = new Worker(workerUrl, jobTrackerUrl);
+
+                    RemotingServices.Marshal(
+                        worker,
+                        Worker.WORKER_OBJECT_URI,
+                        typeof(PADIMapNoReduce.IWorker));
+
                     PADIMapNoReduce.IJobTracker jobTracker =
-                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), "tcp://localhost:" + jobTrackerPort + "/" + Worker.WORKER_OBJECT_ID);
-                    jobTracker.registerWorker("tcp://localhost:" + portInputFormatted);
+                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                    jobTracker.registerWorker(workerUrl);
                 }
             }
 
