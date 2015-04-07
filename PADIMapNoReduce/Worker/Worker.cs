@@ -18,6 +18,11 @@ namespace Worker
         private string filePath;
         private bool workerSetup = false;
 
+        public override object InitializeLifetimeService()
+        {
+            return null;
+        }
+
         /**** WorkerImpl ****/
         public void setup(byte[] code, string className, string clientUrl, string filePath)
         {

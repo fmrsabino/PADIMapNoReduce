@@ -15,6 +15,11 @@ namespace Client
         //public String inputFilePath;
         public string outputFolderPath;
 
+        public override object InitializeLifetimeService()
+        {
+            return null;
+        }
+
         public Client(string worker, long clientPort)
         {
             entryUrl = worker;
