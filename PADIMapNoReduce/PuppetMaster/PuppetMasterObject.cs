@@ -36,7 +36,7 @@ namespace PuppetMaster
             Process p = new Process();
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.FileName = workerExecutablePath;
-            p.StartInfo.Arguments = "-p " + serviceURLparsed.Port;
+            p.StartInfo.Arguments = "-p " + serviceURLparsed.Port + (serviceURL != entryURL ? " " + entryURL : "");
             return p.Start();
         }
 
