@@ -107,7 +107,8 @@ namespace Client
         private char getCharFromBytePosition(long bytePos, string filePath)
         {
             byte[] bytes = new byte[1];
-            BinaryReader reader = new BinaryReader(new FileStream(filePath, FileMode.Open));
+            FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
+            BinaryReader reader = new BinaryReader(f);
 
             reader.BaseStream.Seek(bytePos, SeekOrigin.Begin);
             reader.Read(bytes, 0, bytes.Length);
@@ -126,7 +127,8 @@ namespace Client
             }
 
             byte[] bytes = new byte[byteInterval.Second - byteInterval.First + 1];
-            BinaryReader reader = new BinaryReader(new FileStream(filePath, FileMode.Open));
+            FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
+            BinaryReader reader = new BinaryReader(f);
 
             reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
             reader.Read(bytes, 0, bytes.Length);
@@ -140,7 +142,8 @@ namespace Client
         private string readUntilNewLine(long startByte, string filePath, out long endByte)
         {
             StringBuilder sb = new StringBuilder();
-            BinaryReader reader = new BinaryReader(new FileStream(filePath, FileMode.Open));
+            FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
+            BinaryReader reader = new BinaryReader(f);
             long fileSize = new FileInfo(filePath).Length;
             byte[] bytes = new byte[20];
 
@@ -182,6 +185,7 @@ namespace Client
                 byte[] mapperCode = File.ReadAllBytes(mapDllLocation);
                 PADIMapNoReduce.IJobTracker jobTracker =
                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), entryUrl);
+
                 jobTracker.registerJob(inputFilePath, splitsInputFormatted, outputFolderPath, fileSizeInputFormatted,
                     "tcp://" + System.Environment.MachineName + ":" + clientPort + "/" + CLIENT_OBJECT_ID,
                     mapperCode, mapClassName);

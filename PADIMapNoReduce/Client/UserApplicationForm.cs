@@ -47,10 +47,10 @@ namespace Client
             textBox4.Text = outputFolderPath;
             dllLocationValue.Text = dllLocation;
             classNameValue.Text = dllClassName;
-            button2.Enabled = false;
             button1.Enabled = false;
             createClient();
             submitJob();
+            button2.Enabled = true;
         }
 
 

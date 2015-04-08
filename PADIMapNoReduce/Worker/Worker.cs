@@ -164,6 +164,8 @@ namespace Worker
                 jobQueue.Enqueue(new LibPADIMapNoReduce.FileSplits(i, pair));
             }
 
+            while (workers.Count == 0) { }
+ 
             ManualResetEvent[] threads = new ManualResetEvent[workers.Count];
             //Distribute to each worker one split
             for (int i = 0; i < workers.Count; i++)
