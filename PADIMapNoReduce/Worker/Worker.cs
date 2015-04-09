@@ -6,10 +6,8 @@ using System.Threading;
 
 namespace Worker
 {
-    class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker, INotifyPropertyChanged
+    class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
-        public event PropertyChangedEventHandler PropertyChanged;
-
         public const string WORKER_OBJECT_URI = "W";
 
         private List<string> workers = new List<string>();
