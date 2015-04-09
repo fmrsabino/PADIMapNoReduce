@@ -53,7 +53,6 @@ namespace Client
             button2.Enabled = true;
         }
 
-
         private void label1_Click(object sender, EventArgs e)
         {
 
@@ -156,7 +155,7 @@ namespace Client
         }
 
         private void submitJob()
-        {         
+        {
             if (textBox3.Text.Length > 0)
             {
                 inputFilePath = textBox3.Text;
@@ -164,27 +163,40 @@ namespace Client
 
             splits = (int)numericUpDown3.Value;
 
-            
+
             if (textBox4.Text.Length > 0)
             {
                 outputFolderPath = textBox4.Text;
             }
 
-            long fileSize = new FileInfo(inputFilePath).Length;
-
-            if (dllLocationValue.Text.Length > 0)
+            try
             {
-                dllLocation = dllLocationValue.Text;
-            }
+                long fileSize = new FileInfo(inputFilePath).Length;
 
-            
-            if (classNameValue.Text.Length > 0)
+
+                if (dllLocationValue.Text.Length > 0)
+                {
+                    dllLocation = dllLocationValue.Text;
+                }
+
+
+                if (classNameValue.Text.Length > 0)
+                {
+                    dllClassName = classNameValue.Text;
+                }
+                if (dllClassName != "Mapper") {
+                    System.Console.WriteLine("Could not find any dllClass name: " + dllClassName);
+                    return;
+                }
+
+                button2.Enabled = false;
+                client.submitJob(inputFilePath, splits, outputFolderPath, fileSize, dllLocation, dllClassName);
+
+            }
+            catch (Exception e)
             {
-                dllClassName = classNameValue.Text;
+                System.Console.WriteLine("EXCEPTION: " + e.Message);
             }
-
-            button2.Enabled = false;
-            client.submitJob(inputFilePath, splits, outputFolderPath, fileSize, dllLocation, dllClassName);
         }
 
     }

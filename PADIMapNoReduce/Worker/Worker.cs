@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Reflection;
 using System.Threading;
 
 namespace Worker
 {
-    class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
+    class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker, INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+
         public const string WORKER_OBJECT_URI = "W";
 
         private List<string> workers = new List<string>();
@@ -195,8 +198,8 @@ namespace Worker
 
             try
             {
-                PADIMapNoReduce.IClient client =
-                (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
+                PADIMapNoReduce.IClient client = 
+                    (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
                 client.jobConcluded();
                 System.Console.WriteLine("////////////JOB CONCLUDED/////////////////");
             }
