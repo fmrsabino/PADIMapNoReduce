@@ -62,12 +62,6 @@ namespace Worker
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
 
                 List<string> resultLines = client.processBytes(byteInterval, filePath);
-                System.Console.WriteLine("========= RESULT ==========");
-                foreach (string s in resultLines)
-                {
-                    System.Console.WriteLine(s);
-                }
-                System.Console.WriteLine("===========================");
                 string result = map(resultLines);
                 client.receiveProcessData(result, fileSplits.nrSplits);
             }
@@ -110,12 +104,10 @@ namespace Worker
 
                         }
 
-                        Console.WriteLine("Map call result was: ");
                         string output = "";
                         foreach (KeyValuePair<string, string> p in result)
                         {
                             string format = "key: " + p.Key + ", value: " + p.Value;
-                            Console.WriteLine(format);
                             output += format + Environment.NewLine;
                         }
                         return output;

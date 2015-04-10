@@ -91,7 +91,6 @@ namespace Client
                     }
                 }
             }
-            System.Console.WriteLine(stringBuilder.ToString());
 
             string finalString = stringBuilder.ToString();
             string[] lines = finalString.Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
