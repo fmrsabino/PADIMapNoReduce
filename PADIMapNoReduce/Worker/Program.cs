@@ -35,13 +35,13 @@ namespace Worker
                         {
                             try
                             {
-                                string workerUrl = "tcp://localhost:" + portInputFormatted + "/" + Worker.WORKER_OBJECT_URI;
+                                string workerUrl = "tcp://" + System.Environment.MachineName + ":" + portInputFormatted + "/" + Worker.WORKER_OBJECT_URI;
                                 string jobTrackerUrl = args[2];
                                 Worker worker = new Worker(workerUrl, jobTrackerUrl);
 
                                 //Publish Worker object
                                 channel = new TcpChannel(portInputFormatted);
-                                ChannelServices.RegisterChannel(channel, true);
+                                ChannelServices.RegisterChannel(channel, false);
 
                                 RemotingServices.Marshal(
                                     worker,
@@ -74,19 +74,19 @@ namespace Worker
                         {
                             try
                             {
-                                string jobTrackerUrl = "tcp://localhost:" + portInputFormatted + "/" + Worker.WORKER_OBJECT_URI;
+                                string jobTrackerUrl = "tcp://" + System.Environment.MachineName  + ":" + portInputFormatted + "/" + Worker.WORKER_OBJECT_URI;
                                 Worker worker = new Worker(jobTrackerUrl);
 
                                 //Publish JobTrakcer object
                                 channel = new TcpChannel(portInputFormatted);
-                                ChannelServices.RegisterChannel(channel, true);
+                                ChannelServices.RegisterChannel(channel, false);
                                 RemotingServices.Marshal(
                                         worker,
                                         Worker.WORKER_OBJECT_URI,
                                         typeof(PADIMapNoReduce.IJobTracker));
 
                                 System.Console.WriteLine("JobTracker registred");
-                                Console.Title = "JobTracker - " + "tcp://localhost:" + portInputFormatted;
+                                Console.Title = "JobTracker - " + "tcp://" + System.Environment.MachineName + ":" + portInputFormatted;
                             }
                             catch (Exception e)
                             {
@@ -123,7 +123,7 @@ namespace Worker
                 //DONE: Check exceptions
                 //DONE: Check for port range
                 channel = new TcpChannel(portInputFormatted);
-                ChannelServices.RegisterChannel(channel, true);
+                ChannelServices.RegisterChannel(channel, false);
                 
 
                 //TESTING

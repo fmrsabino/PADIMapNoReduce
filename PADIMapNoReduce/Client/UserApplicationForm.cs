@@ -141,7 +141,7 @@ namespace Client
             try
             {
                 TcpChannel channel = new TcpChannel(clientPort);
-                ChannelServices.RegisterChannel(channel, true);
+                ChannelServices.RegisterChannel(channel, false);
                 RemotingServices.Marshal(
                     client,
                     Client.CLIENT_OBJECT_ID,
