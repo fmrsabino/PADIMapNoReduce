@@ -61,9 +61,13 @@ namespace Worker
                 PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
 
-                List<string> resultLines = client.processBytes(byteInterval, filePath);
+                client.processBytes(byteInterval, filePath);
+
+                System.Console.WriteLine("Finished processing split!");
+
+                /*
                 string result = map(resultLines);
-                client.receiveProcessData(result, fileSplits.nrSplits);
+                client.receiveProcessData(result, fileSplits.nrSplits);*/
             }
             else
             {

@@ -27,27 +27,26 @@ namespace Client
             this.clientPort = clientPort;
         }
 
-        public List<string> processBytes(PADIMapNoReduce.Pair<long, long> byteInterval, string filePath)
+        public List<byte> processBytes(PADIMapNoReduce.Pair<long, long> byteInterval, string filePath)
         {
             System.Console.WriteLine("Received request for bytes from " + byteInterval.First + " to " + byteInterval.Second);
 
-            List<string> result = new List<string>();
-            StringBuilder stringBuilder = new StringBuilder();
+            List<byte> result = new List<byte>();
 
             long fileSize = new FileInfo(filePath).Length;
             if (byteInterval.First == 0 && byteInterval.Second == fileSize)
             {
-                stringBuilder.Append(readByteInterval(byteInterval, filePath));
+                return new List<byte>(readByteInterval(byteInterval, filePath));
             }
             else
             {
                 if (byteInterval.First == 0) //FirstSplit
                 {
                     long lastByte;
-                    stringBuilder.Append(readByteInterval(byteInterval, filePath));
-                    if (!stringBuilder.ToString().EndsWith("\n"))
+                    result.AddRange(new List<byte>(readByteInterval(byteInterval, filePath)));
+                    if (getCharFromBytePosition(result[result.Count - 1], filePath) == '\n')
                     {
-                        stringBuilder.Append(readUntilNewLine(byteInterval.Second + 1, filePath, out lastByte));
+                        result.AddRange(new List<byte>(readUntilNewLine(byteInterval.Second + 1, filePath, out lastByte)));
                     }
                 }
                 else if (byteInterval.Second == fileSize) //lastSplit
@@ -57,7 +56,7 @@ namespace Client
 
                     if (lastChar != '\n')
                     {
-                        readUntilNewLine(byteInterval.First, filePath, out lastByte);
+                        result.AddRange(readUntilNewLine(byteInterval.First, filePath, out lastByte));
                         lastByte++;
                     }
 
@@ -66,7 +65,7 @@ namespace Client
                         return result;
                     }
 
-                    stringBuilder.Append(readByteInterval(new PADIMapNoReduce.Pair<long, long>(lastByte, fileSize), filePath));
+                    result.AddRange(readByteInterval(new PADIMapNoReduce.Pair<long, long>(lastByte, fileSize), filePath));
                 }
                 else //middle split
                 {
@@ -75,7 +74,7 @@ namespace Client
 
                     if (lastChar != '\n')
                     {
-                        readUntilNewLine(byteInterval.First, filePath, out lastByte);
+                        result.AddRange(readUntilNewLine(byteInterval.First, filePath, out lastByte));
                         lastByte++;
                     }
 
@@ -84,19 +83,12 @@ namespace Client
                         return result;
                     }
 
-                    stringBuilder.Append(readByteInterval(new PADIMapNoReduce.Pair<long, long>(lastByte, byteInterval.Second), filePath));
-                    if (!stringBuilder.ToString().EndsWith("\n"))
+                    result.AddRange(readByteInterval(new PADIMapNoReduce.Pair<long, long>(lastByte, byteInterval.Second), filePath));
+                    if (getCharFromBytePosition(result[result.Count - 1], filePath) == '\n')
                     {
-                        stringBuilder.Append(readUntilNewLine(byteInterval.Second + 1, filePath, out lastByte));
+                        result.AddRange(readUntilNewLine(byteInterval.Second + 1, filePath, out lastByte));
                     }
                 }
-            }
-
-            string finalString = stringBuilder.ToString();
-            string[] lines = finalString.Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
-            foreach (string line in lines)
-            {
-                result.Add(line);
             }
 
             return result;
@@ -107,42 +99,43 @@ namespace Client
         {
             byte[] bytes = new byte[1];
             FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
-            BinaryReader reader = new BinaryReader(f);
+            BinaryReader reader = new BinaryReader(new BufferedStream(f));
 
             reader.BaseStream.Seek(bytePos, SeekOrigin.Begin);
             reader.Read(bytes, 0, bytes.Length);
             string text = Encoding.UTF8.GetString(bytes);
 
+            f.Close();
             reader.Close();
             return text[0];
         }
 
         //Returns the string that corresponds to the byteInterval received
-        private string readByteInterval(PADIMapNoReduce.Pair<long, long> byteInterval, string filePath)
+        private byte[] readByteInterval(PADIMapNoReduce.Pair<long, long> byteInterval, string filePath)
         {
             if (byteInterval.First > byteInterval.Second)
             {
-                return "";
+                return new byte[0];
             }
 
             byte[] bytes = new byte[byteInterval.Second - byteInterval.First + 1];
             FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
-            BinaryReader reader = new BinaryReader(f);
+            BinaryReader reader = new BinaryReader(new BufferedStream(f));
 
             reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
             reader.Read(bytes, 0, bytes.Length);
-            string text = Encoding.UTF8.GetString(bytes);
 
+            f.Close();
             reader.Close();
-            return text;
+            return bytes;
         }
 
         //Get the portion of the string from startByte to the first newline encountered
-        private string readUntilNewLine(long startByte, string filePath, out long endByte)
+        private byte[] readUntilNewLine(long startByte, string filePath, out long endByte)
         {
             StringBuilder sb = new StringBuilder();
             FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
-            BinaryReader reader = new BinaryReader(f);
+            BinaryReader reader = new BinaryReader(new BufferedStream(f));
             long fileSize = new FileInfo(filePath).Length;
             byte[] bytes = new byte[20];
 
@@ -169,9 +162,9 @@ namespace Client
 
             //Read until new line
             endByte = startByte + newLinePos;
+            f.Close();
             reader.Close();
-            sb.Append(readByteInterval(new PADIMapNoReduce.Pair<long, long>(startByte, endByte), filePath));
-            return sb.ToString();
+            return readByteInterval(new PADIMapNoReduce.Pair<long, long>(startByte, endByte), filePath);
         }
 
         public void submitJob(string inputFilePath, int splitsInputFormatted, string outputFolderPath, long fileSizeInputFormatted,
