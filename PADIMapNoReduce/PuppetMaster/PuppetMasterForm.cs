@@ -41,7 +41,7 @@ namespace PuppetMaster
             delegateMockStartWorker = new MockStartWorker(mockStartWorker);
 
             TcpChannel receiveChannel = new TcpChannel(Convert.ToInt32(port));
-            ChannelServices.RegisterChannel(receiveChannel, true);
+            ChannelServices.RegisterChannel(receiveChannel, false);
 
             PuppetMaster pm = new PuppetMaster(workerExecutablePath);
 
@@ -227,9 +227,9 @@ namespace PuppetMaster
 
         private void executeSTATUSCommand(MatchCollection matches)
         {
-
-                MessageBox.Show("STATUS: insert status here");
-
+            PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+    typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
+            pm.printStatus();
         }
 
         private void executeSLOWWCommand(MatchCollection matches)

@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Tcp;
+using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -24,9 +28,10 @@ namespace PuppetMaster
             Uri serviceURLparsed;
             try
             {
-                workers.Add(id, serviceURL);
                 serviceURLparsed = new Uri(serviceURL);
-            } catch (Exception e)
+                workers.Add(id, "tcp://" + System.Environment.MachineName + ":" + serviceURLparsed.Port + "/W");
+            }
+            catch (Exception e)
             {
                 // Same id already exists. Not relaunching.
                 // Or serviceURL is not a valid URL
@@ -40,5 +45,15 @@ namespace PuppetMaster
             return p.Start();
         }
 
+        public void printStatus()
+        {
+            foreach(KeyValuePair<int, string> worker in workers)
+            {
+
+                PADIMapNoReduce.IJobTracker w = (PADIMapNoReduce.IJobTracker)Activator.GetObject(
+        typeof(PADIMapNoReduce.IJobTracker), worker.Value);
+                w.printStatus();
+            }
+        }
     }
 }

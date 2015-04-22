@@ -23,6 +23,9 @@ namespace Worker
         private Timer timer;
         private const long TIME_INTERVAL_IN_MS = 5000;
 
+        public static STATUS CURRENT_STATUS;
+        public static float PERCENTAGE_FINISHED;
+
         public override object InitializeLifetimeService()
         {
             return null;
@@ -31,12 +34,14 @@ namespace Worker
         public Worker(string jobTrackerUrl)
         {
             this.jobTrackerUrl = jobTrackerUrl;
+            CURRENT_STATUS = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
         }
 
         public Worker(string workerUrl, string jobTrackerUrl)
         {
             this.workerUrl = workerUrl;
             this.jobTrackerUrl = jobTrackerUrl;
+            CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
         }
 
         /**** WorkerImpl ****/
@@ -54,25 +59,31 @@ namespace Worker
 
         public void work(LibPADIMapNoReduce.FileSplits fileSplits)
         {
+            CURRENT_STATUS = STATUS.WORKER_WORKING; // For STATUS command of PuppetMaster
+            PERCENTAGE_FINISHED = 0;
             PADIMapNoReduce.Pair<long, long> byteInterval = fileSplits.pair;
             Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
             if (workerSetup)
             {
                 PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
-
+                CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
                 client.processBytes(byteInterval, filePath);
 
                 System.Console.WriteLine("Finished processing split!");
 
+                CURRENT_STATUS = STATUS.WORKER_WORKING;
                 /*
                 string result = map(resultLines);
+                CURRENT_STATUS = STATUS.WORKER_TRANSFERING_OUTPUT;
                 client.receiveProcessData(result, fileSplits.nrSplits);*/
             }
             else
             {
                 Console.WriteLine("Worker is not set");
             }
+            PERCENTAGE_FINISHED = 1; // For STATUS command of PuppetMaster
+            CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
         }
 
         private string map(List<string> lines)
@@ -89,7 +100,8 @@ namespace Worker
                         object ClassObj = Activator.CreateInstance(type);
 
                         List<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
-                        // Dynamically Invoke the method
+                        // Dynamically Invoke the method 
+                        int i = 0; // For STATUS command of PuppetMaster
                         foreach (string line in lines)
                         {
                             object[] args = new object[] { line };
@@ -105,7 +117,9 @@ namespace Worker
                             {
                                 result.Add(p);
                             }
-
+                            // For STATUS command of PuppetMaster
+                            i++;
+                            PERCENTAGE_FINISHED = i / lines.Count;
                         }
 
                         string output = "";
@@ -134,8 +148,11 @@ namespace Worker
         public void registerJob
             (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName)
         {
+            CURRENT_STATUS = STATUS.JOBTRACKER_WORKING; // For STATUS command of PuppetMaster
+
             if (nSplits == 0)
             {
+                CURRENT_STATUS = STATUS.JOBTRACKER_WAITING;
                 return;
             }
 
@@ -183,6 +200,7 @@ namespace Worker
                 catch (Exception e)
                 {
                     System.Console.WriteLine("EXCEPTION: " + e.Message);
+                    CURRENT_STATUS = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
                     return;
                 }
             }
@@ -196,10 +214,12 @@ namespace Worker
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
                 client.jobConcluded();
                 System.Console.WriteLine("////////////JOB CONCLUDED/////////////////");
+                CURRENT_STATUS = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
             }
             catch (Exception e)
             {
                 System.Console.WriteLine("EXCEPTION: " + e.Message);
+                CURRENT_STATUS = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
                 return;
             }
         }
@@ -248,5 +268,36 @@ namespace Worker
         {
             Console.WriteLine("I'M ALIVE from " + workerUrl);
         }
+
+        public void printStatus()
+        {
+            switch (CURRENT_STATUS)
+            {
+                case STATUS.JOBTRACKER_WAITING:
+                    Console.WriteLine("[*] The JobTracker is waiting");
+                    break;
+                case STATUS.JOBTRACKER_WORKING:
+                    Console.WriteLine("[*] The JobTracker is working");
+                    break;
+                case STATUS.WORKER_WAITING:
+                    Console.WriteLine("[*] The Worker is waiting");
+                    break;
+                case STATUS.WORKER_WORKING:
+                    Console.WriteLine("[*] The Worker is working. It's " + 100*PERCENTAGE_FINISHED + "% finished.");
+                    break;
+                case STATUS.WORKER_TRANSFERING_INPUT:
+                    Console.WriteLine("[*] The Worker is transfering input data from the client.");
+                    break;
+                case STATUS.WORKER_TRANSFERING_OUTPUT:
+                    Console.WriteLine("[*] The Worker is transfering output data to the client.");
+                    break;
+            }
+        }
+
+        // For STATUS command of PuppetMaster
+        public enum STATUS
+        {
+            JOBTRACKER_WAITING, JOBTRACKER_WORKING, WORKER_WAITING, WORKER_TRANSFERING_INPUT, WORKER_WORKING, WORKER_TRANSFERING_OUTPUT 
+        };
     }
 }
