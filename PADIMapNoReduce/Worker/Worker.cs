@@ -14,6 +14,10 @@ namespace Worker
         private Queue<LibPADIMapNoReduce.FileSplits> jobQueue;
 
         private byte[] mapperCode;
+        private Assembly assembly;
+        private object classObj;
+        private Type type;
+
         private string mapperClass;
         private string clientUrl;
         private string filePath;
@@ -53,6 +57,21 @@ namespace Worker
             this.clientUrl = clientUrl;
             this.filePath = filePath;
 
+            assembly = Assembly.Load(mapperCode);
+            // Walk through each type in the assembly looking for our class
+            foreach (Type type in assembly.GetTypes())
+            {
+                if (type.IsClass == true)
+                {
+                    if (type.FullName.EndsWith("." + mapperClass))
+                    {
+                        this.type = type;
+                        // create an instance of the object
+                        classObj = Activator.CreateInstance(type);
+                    }
+                }
+            }
+
             //timer = new Timer(sendImAlive, null, TIME_INTERVAL_IN_MS, Timeout.Infinite);
             workerSetup = true;
         }
@@ -67,16 +86,19 @@ namespace Worker
             {
                 PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
+                
                 CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
-                client.processBytes(byteInterval, filePath);
-
-                System.Console.WriteLine("Finished processing split!");
+                List<byte> bytes = client.processBytes(byteInterval, filePath);
 
                 CURRENT_STATUS = STATUS.WORKER_WORKING;
-                /*
-                string result = map(resultLines);
-                CURRENT_STATUS = STATUS.WORKER_TRANSFERING_OUTPUT;
-                client.receiveProcessData(result, fileSplits.nrSplits);*/
+                List<string> finalLines = new List<string>();
+                byte[] temp = bytes.ToArray();
+                string result = System.Text.Encoding.UTF8.GetString(temp);
+                string[] lines = result.Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
+                finalLines.AddRange(lines);
+
+                string mapResult = map(ref finalLines);
+                client.receiveProcessData(mapResult, fileSplits.nrSplits);
             }
             else
             {
@@ -86,53 +108,38 @@ namespace Worker
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
         }
 
-        private string map(List<string> lines)
+        private string map(ref List<string> lines)
         {
-            Assembly assembly = Assembly.Load(mapperCode);
-            // Walk through each type in the assembly looking for our class
-            foreach (Type type in assembly.GetTypes())
+            List<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
+            // Dynamically Invoke the method 
+            int i = 0; // For STATUS command of PuppetMaster
+            foreach (string line in lines)
             {
-                if (type.IsClass == true)
+                object[] args = new object[] { line };
+                object resultObject = type.InvokeMember("Map",
+                    BindingFlags.Default | BindingFlags.InvokeMethod,
+                        null,
+                        classObj,
+                        args);
+
+                IList<KeyValuePair<string, string>> tempResult = (IList<KeyValuePair<string, string>>)resultObject;
+                //Can't join two ILists :(
+                foreach (KeyValuePair<string, string> p in tempResult)
                 {
-                    if (type.FullName.EndsWith("." + mapperClass))
-                    {
-                        // create an instance of the object
-                        object ClassObj = Activator.CreateInstance(type);
-
-                        List<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
-                        // Dynamically Invoke the method 
-                        int i = 0; // For STATUS command of PuppetMaster
-                        foreach (string line in lines)
-                        {
-                            object[] args = new object[] { line };
-                            object resultObject = type.InvokeMember("Map",
-                              BindingFlags.Default | BindingFlags.InvokeMethod,
-                                   null,
-                                   ClassObj,
-                                   args);
-
-                            IList<KeyValuePair<string, string>> tempResult = (IList<KeyValuePair<string, string>>)resultObject;
-                            //Can't join two ILists :(
-                            foreach (KeyValuePair<string, string> p in tempResult)
-                            {
-                                result.Add(p);
-                            }
-                            // For STATUS command of PuppetMaster
-                            i++;
-                            PERCENTAGE_FINISHED = i / lines.Count;
-                        }
-
-                        string output = "";
-                        foreach (KeyValuePair<string, string> p in result)
-                        {
-                            string format = "key: " + p.Key + ", value: " + p.Value;
-                            output += format + Environment.NewLine;
-                        }
-                        return output;
-                    }
+                    result.Add(p);
                 }
+                // For STATUS command of PuppetMaster
+                i++;
+                PERCENTAGE_FINISHED = i / lines.Count;
             }
-            throw (new System.Exception("could not invoke method"));
+
+            string output = "";
+            foreach (KeyValuePair<string, string> p in result)
+            {
+                string format = "key: " + p.Key + ", value: " + p.Value;
+                output += format + Environment.NewLine;
+            }
+            return output;
         }
 
         public void sendImAlive(Object state)

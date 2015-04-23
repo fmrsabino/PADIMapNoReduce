@@ -99,7 +99,7 @@ namespace Client
         {
             byte[] bytes = new byte[1];
             FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
-            BinaryReader reader = new BinaryReader(new BufferedStream(f));
+            BinaryReader reader = new BinaryReader(f);
 
             reader.BaseStream.Seek(bytePos, SeekOrigin.Begin);
             reader.Read(bytes, 0, bytes.Length);
@@ -137,7 +137,7 @@ namespace Client
             FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
             BinaryReader reader = new BinaryReader(new BufferedStream(f));
             long fileSize = new FileInfo(filePath).Length;
-            byte[] bytes = new byte[20];
+            byte[] bytes = new byte[200];
 
             long newLinePos = -1;
             while (startByte < fileSize)
