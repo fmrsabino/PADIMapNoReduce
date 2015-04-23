@@ -44,7 +44,7 @@ namespace Client
                 {
                     long lastByte;
                     result.AddRange(new List<byte>(readByteInterval(byteInterval, filePath)));
-                    if (getCharFromBytePosition(result[result.Count - 1], filePath) == '\n')
+                    if (getCharFromBytePosition(result[result.Count - 1], filePath) != '\n')
                     {
                         result.AddRange(new List<byte>(readUntilNewLine(byteInterval.Second + 1, filePath, out lastByte)));
                     }
@@ -56,7 +56,7 @@ namespace Client
 
                     if (lastChar != '\n')
                     {
-                        result.AddRange(readUntilNewLine(byteInterval.First, filePath, out lastByte));
+                        readUntilNewLine(byteInterval.First, filePath, out lastByte);
                         lastByte++;
                     }
 
@@ -74,7 +74,7 @@ namespace Client
 
                     if (lastChar != '\n')
                     {
-                        result.AddRange(readUntilNewLine(byteInterval.First, filePath, out lastByte));
+                        readUntilNewLine(byteInterval.First, filePath, out lastByte);
                         lastByte++;
                     }
 
@@ -84,7 +84,7 @@ namespace Client
                     }
 
                     result.AddRange(readByteInterval(new PADIMapNoReduce.Pair<long, long>(lastByte, byteInterval.Second), filePath));
-                    if (getCharFromBytePosition(result[result.Count - 1], filePath) == '\n')
+                    if (getCharFromBytePosition(result[result.Count - 1], filePath) != '\n')
                     {
                         result.AddRange(readUntilNewLine(byteInterval.Second + 1, filePath, out lastByte));
                     }
