@@ -14,6 +14,7 @@ namespace PADIMapNoReduce {
             (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName);
         bool registerWorker(string src);
         void registerImAlive(string workerUrl);
+        void printStatus();
     }
 
     public interface IWorker : IJobTracker
@@ -26,7 +27,7 @@ namespace PADIMapNoReduce {
     public interface IClient
     {
         // Receives bytes and returns the lines corresponding to those bytes
-        List<string> processBytes(Pair<long, long> byteInterval, string filePath);
+        List<byte> processBytes(Pair<long, long> byteInterval, string filePath);
         //Receives processed data from workers
         void receiveProcessData(string output, int nrSplit);
         //Receives notification from JobTracker that job has concluded
@@ -36,6 +37,7 @@ namespace PADIMapNoReduce {
     public interface IPuppetMaster
     {
         bool startWorker(int id, string serviceURL, string entryURL);
+        void printStatus();
     }
 
 }
