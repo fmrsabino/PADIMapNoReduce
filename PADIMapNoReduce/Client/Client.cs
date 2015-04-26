@@ -97,15 +97,14 @@ namespace Client
         private char getCharFromBytePosition(long bytePos, string filePath)
         {
             byte[] bytes = new byte[1];
-            FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
-            BinaryReader reader = new BinaryReader(f);
+            string text;
+            using (BinaryReader reader = new BinaryReader(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read)))
+            {
+                reader.BaseStream.Seek(bytePos, SeekOrigin.Begin);
+                reader.Read(bytes, 0, bytes.Length);
+                text = Encoding.UTF8.GetString(bytes);
+            }
 
-            reader.BaseStream.Seek(bytePos, SeekOrigin.Begin);
-            reader.Read(bytes, 0, bytes.Length);
-            string text = Encoding.UTF8.GetString(bytes);
-
-            f.Close();
-            reader.Close();
             return text[0];
         }
 
@@ -118,51 +117,50 @@ namespace Client
             }
 
             byte[] bytes = new byte[byteInterval.Second - byteInterval.First + 1];
-            FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
-            BinaryReader reader = new BinaryReader(new BufferedStream(f));
+            using (BinaryReader reader = new BinaryReader(new BufferedStream(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))))
+            {
+                reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
+                reader.Read(bytes, 0, bytes.Length);
+            }
 
-            reader.BaseStream.Seek(byteInterval.First, SeekOrigin.Begin);
-            reader.Read(bytes, 0, bytes.Length);
-
-            f.Close();
-            reader.Close();
             return bytes;
         }
 
         //Get the portion of the string from startByte to the first newline encountered
         private byte[] readUntilNewLine(long startByte, string filePath, out long endByte)
         {
-            StringBuilder sb = new StringBuilder();
-            FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read); 
-            BinaryReader reader = new BinaryReader(new BufferedStream(f));
+
+            string sb = "";
             long fileSize = new FileInfo(filePath).Length;
             byte[] bytes = new byte[200];
 
             long newLinePos = -1;
-            while (startByte < fileSize)
-            {
-                //Retrieve more bytes
-                reader.BaseStream.Seek(startByte, SeekOrigin.Begin);
-                reader.Read(bytes, 0, bytes.Length);
-                string text = Encoding.UTF8.GetString(bytes);
 
-                if ((newLinePos = text.IndexOf("\n")) == -1)
+            using (BinaryReader reader = new BinaryReader(new BufferedStream(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))))
+            {
+                while (startByte < fileSize)
                 {
-                    //safe to write to string
-                    sb.Append(Encoding.UTF8.GetString(bytes));
-                    startByte += 20;
-                }
-                else
-                {
-                    //We now have the correct value of newLinePos
-                    break;
+                    //Retrieve more bytes
+                    reader.BaseStream.Seek(startByte, SeekOrigin.Begin);
+                    reader.Read(bytes, 0, bytes.Length);
+                    string text = Encoding.UTF8.GetString(bytes);
+
+                    if ((newLinePos = text.IndexOf("\n")) == -1)
+                    {
+                        //safe to write to string
+                        sb += Encoding.UTF8.GetString(bytes);
+                        startByte += 20;
+                    }
+                    else
+                    {
+                        //We now have the correct value of newLinePos
+                        break;
+                    }
                 }
             }
 
             //Read until new line
             endByte = startByte + newLinePos;
-            f.Close();
-            reader.Close();
             return readByteInterval(new PADIMapNoReduce.Pair<long, long>(startByte, endByte), filePath);
         }
 
