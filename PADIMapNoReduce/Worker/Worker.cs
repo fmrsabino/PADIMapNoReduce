@@ -27,8 +27,12 @@ namespace Worker
         private Timer timer;
         private const long TIME_INTERVAL_IN_MS = 5000;
 
+        public static STATUS PREVIOUS_STATUS;
         public static STATUS CURRENT_STATUS;
         public static float PERCENTAGE_FINISHED;
+
+        static object workerMonitor;
+        static object jobtrackerMonitor;
 
         public override object InitializeLifetimeService()
         {
@@ -39,6 +43,7 @@ namespace Worker
         {
             this.jobTrackerUrl = jobTrackerUrl;
             CURRENT_STATUS = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
+            jobtrackerMonitor = new object();
         }
 
         public Worker(string workerUrl, string jobTrackerUrl)
@@ -46,11 +51,13 @@ namespace Worker
             this.workerUrl = workerUrl;
             this.jobTrackerUrl = jobTrackerUrl;
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
+            workerMonitor = new object();
         }
 
         /**** WorkerImpl ****/
         public void setup(byte[] code, string className, string clientUrl, string filePath)
         {
+            handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
             Console.Out.WriteLine("Received code for class " + className);
             mapperCode = code;
             mapperClass = className;
@@ -78,6 +85,7 @@ namespace Worker
 
         public void work(LibPADIMapNoReduce.FileSplits fileSplits)
         {
+            handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
             CURRENT_STATUS = STATUS.WORKER_WORKING; // For STATUS command of PuppetMaster
             PERCENTAGE_FINISHED = 0;
             PADIMapNoReduce.Pair<long, long> byteInterval = fileSplits.pair;
@@ -108,6 +116,7 @@ namespace Worker
 
         private bool map(ref string[] lines, int splitId)
         {
+            handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
             Console.WriteLine("========START MAP========");
             PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
@@ -117,7 +126,8 @@ namespace Worker
             int i = 0; // For STATUS command of PuppetMaster
             for (int j = 0; j < lines.Length; j++)
             {
-                    object[] args = new object[] { lines[j] };
+                handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
+                object[] args = new object[] { lines[j] };
                     object resultObject = type.InvokeMember("Map",
                         BindingFlags.Default | BindingFlags.InvokeMethod,
                             null,
@@ -175,6 +185,7 @@ namespace Worker
         public void registerJob
             (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName)
         {
+            handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
             CURRENT_STATUS = STATUS.JOBTRACKER_WORKING; // For STATUS command of PuppetMaster
 
             if (nSplits == 0)
@@ -278,6 +289,7 @@ namespace Worker
 
         public bool registerWorker(string workerUrl)
         {
+            handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
             if (!workers.Contains(workerUrl))
             {
                 workers.Add(workerUrl);
@@ -306,6 +318,9 @@ namespace Worker
                 case STATUS.JOBTRACKER_WORKING:
                     Console.WriteLine("[*] The JobTracker is working");
                     break;
+                case STATUS.JOBTRACKER_FROZEN:
+                    Console.WriteLine("[*] The Job Tracker is frozen.");
+                    break;
                 case STATUS.WORKER_WAITING:
                     Console.WriteLine("[*] The Worker is waiting");
                     break;
@@ -318,13 +333,113 @@ namespace Worker
                 case STATUS.WORKER_TRANSFERING_OUTPUT:
                     Console.WriteLine("[*] The Worker is transfering output data to the client.");
                     break;
+                case STATUS.WORKER_FROZEN:
+                    Console.WriteLine("[*] The Worker is frozen.");
+                    break;
+                case STATUS.WORKER_SLOWED:
+                    Console.WriteLine("[*] The Worker is slowed.");
+                    break;
             }
         }
+
+        private void handleFreezeJobTracker()
+        {
+            lock (jobtrackerMonitor)
+            {
+                if (CURRENT_STATUS == STATUS.JOBTRACKER_FROZEN)
+                {
+                    Console.WriteLine("[D] Job tracker frozen. Locking...");
+                    Monitor.Wait(jobtrackerMonitor);
+                }
+            }
+        }
+
+        private void handleFreezeWorker()
+        {
+            lock (workerMonitor)
+            {
+                if (CURRENT_STATUS == STATUS.WORKER_FROZEN)
+                {
+                    Console.WriteLine("[D] Worker frozen. Locking...");
+                    Monitor.Wait(workerMonitor);
+                }
+            }
+        }
+
+        public void sloww(int seconds)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void freezew()
+        {
+            if (CURRENT_STATUS != STATUS.WORKER_FROZEN)
+            {
+                Console.WriteLine("[D] Freezing worker...");
+                PREVIOUS_STATUS = CURRENT_STATUS;
+                CURRENT_STATUS = STATUS.WORKER_FROZEN;
+            }
+            else
+            {
+                Console.WriteLine("[D] Freeze called on worker, but it's already frozen...");
+            }
+        }
+
+        public void unfreezew()
+        {
+            lock (workerMonitor)
+            {
+                if (CURRENT_STATUS == STATUS.WORKER_FROZEN)
+                {
+                    Console.WriteLine("[D] Unfreezing worker...");
+                    CURRENT_STATUS = PREVIOUS_STATUS;
+                    Monitor.PulseAll(workerMonitor);
+                }
+                else
+                {
+                    Console.WriteLine("[D] Freeze called on worker, but it's already unfrozen...");
+                }
+            }
+        }
+
+        public void freezec()
+        {
+            if (CURRENT_STATUS != STATUS.JOBTRACKER_FROZEN)
+            {
+                Console.WriteLine("[D] Freezing job tracker...");
+                Monitor.Enter(jobtrackerMonitor);
+                PREVIOUS_STATUS = CURRENT_STATUS;
+                CURRENT_STATUS = STATUS.JOBTRACKER_FROZEN;
+            }
+            else
+            {
+                Console.WriteLine("[D] Freeze called on job tracker, but it's already frozen...");
+            }
+        }
+
+        public void unfreezec()
+        {
+            lock (jobtrackerMonitor)
+            {
+                if (CURRENT_STATUS == STATUS.JOBTRACKER_FROZEN)
+                {
+                    Console.WriteLine("[D] Unfreezing job tracker...");
+                    CURRENT_STATUS = PREVIOUS_STATUS;
+                    Monitor.PulseAll(jobtrackerMonitor);
+                }
+                else
+                {
+                    Console.WriteLine("[D] Freeze called on job tracker, but it's already unfrozen...");
+                }
+            }
+
+        }
+
 
         // For STATUS command of PuppetMaster
         public enum STATUS
         {
-            JOBTRACKER_WAITING, JOBTRACKER_WORKING, WORKER_WAITING, WORKER_TRANSFERING_INPUT, WORKER_WORKING, WORKER_TRANSFERING_OUTPUT 
+            JOBTRACKER_WAITING, JOBTRACKER_WORKING, JOBTRACKER_FROZEN, WORKER_WAITING, WORKER_TRANSFERING_INPUT, WORKER_WORKING, WORKER_TRANSFERING_OUTPUT, WORKER_FROZEN, WORKER_SLOWED
         };
     }
 }

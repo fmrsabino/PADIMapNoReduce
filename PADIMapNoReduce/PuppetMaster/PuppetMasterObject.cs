@@ -47,5 +47,79 @@ namespace PuppetMaster
                 w.printStatus();
             }
         }
+        public void freezec(int id)
+        {
+            string url;
+            if (workers.TryGetValue(id, out url))
+            {
+                PADIMapNoReduce.IJobTracker w = (PADIMapNoReduce.IJobTracker)Activator.GetObject(
+typeof(PADIMapNoReduce.IJobTracker), url);
+                w.freezec();
+            }
+            else
+            {
+                // No url found. Do nothing.
+            }
+        }
+
+        public void unfreezec(int id)
+        {
+            string url;
+            if (workers.TryGetValue(id, out url))
+            {
+                PADIMapNoReduce.IJobTracker w = (PADIMapNoReduce.IJobTracker)Activator.GetObject(
+typeof(PADIMapNoReduce.IJobTracker), url);
+                w.unfreezec();
+            }
+            else
+            {
+                // No url found. Do nothing.
+            }
+        }
+
+        public void sloww(int id, int seconds)
+        {
+            string url;
+            if (workers.TryGetValue(id, out url))
+            {
+                PADIMapNoReduce.IWorker w = (PADIMapNoReduce.IWorker)Activator.GetObject(
+typeof(PADIMapNoReduce.IWorker), url);
+                w.sloww(seconds);
+            }
+            else
+            {
+                // No url found. Do nothing.
+            }
+        }
+
+        public void freezew(int id)
+        {
+            string url;
+            if (workers.TryGetValue(id, out url))
+            {
+                PADIMapNoReduce.IWorker w = (PADIMapNoReduce.IWorker)Activator.GetObject(
+typeof(PADIMapNoReduce.IWorker), url);
+                w.freezew();
+            }
+            else
+            {
+                // No url found. Do nothing.
+            }
+        }
+
+        public void unfreezew(int id)
+        {
+            string url;
+            if (workers.TryGetValue(id, out url))
+            {
+                PADIMapNoReduce.IWorker w = (PADIMapNoReduce.IWorker)Activator.GetObject(
+typeof(PADIMapNoReduce.IWorker), url);
+                w.unfreezew();
+            }
+            else
+            {
+                // No url found. Do nothing.
+            }
+        }
     }
 }

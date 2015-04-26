@@ -15,6 +15,8 @@ namespace PADIMapNoReduce {
         bool registerWorker(string src);
         void registerImAlive(string workerUrl);
         void printStatus();
+        void freezec();
+        void unfreezec();
     }
 
     public interface IWorker : IJobTracker
@@ -22,6 +24,9 @@ namespace PADIMapNoReduce {
         void setup(byte[] code, string className, string clientUrl, string filePath);
         void work(FileSplits fileSplits);
         void sendImAlive(Object state);
+        void sloww(int seconds);
+        void freezew();
+        void unfreezew();
     }
 
     public interface IClient
@@ -38,6 +43,11 @@ namespace PADIMapNoReduce {
     {
         bool startWorker(int id, string serviceURL, string entryURL);
         void printStatus();
+        void freezec(int id);
+        void unfreezec(int id);
+        void sloww(int id, int seconds);
+        void freezew(int id);
+        void unfreezew(int id);
     }
 
 }

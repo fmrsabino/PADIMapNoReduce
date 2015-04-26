@@ -234,8 +234,9 @@ namespace PuppetMaster
             {
                 int id = int.Parse(matches[0].Groups[1].Value);
                 int seconds = int.Parse(matches[0].Groups[2].Value);
-
-                MessageBox.Show("SLOWW\nId: " + id + "\nSeconds: " + seconds);
+                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
+                pm.sloww(id, seconds);
             }
             catch (Exception e)
             {
@@ -250,8 +251,9 @@ namespace PuppetMaster
             try
             {
                 int id = int.Parse(matches[0].Groups[1].Value);
-
-                MessageBox.Show("FREEZEW - Id: " + id);
+                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
+                pm.freezew(id);
             }
             catch (Exception e)
             {
@@ -267,7 +269,9 @@ namespace PuppetMaster
             {
                 int id = int.Parse(matches[0].Groups[1].Value);
 
-                MessageBox.Show("UNFREEZEW - Id: " + id);
+                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
+                pm.unfreezew(id);
             }
             catch (Exception e)
             {
@@ -283,7 +287,9 @@ namespace PuppetMaster
             {
                 int id = int.Parse(matches[0].Groups[1].Value);
 
-                MessageBox.Show("FREEZEC - Id: " + id);
+                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
+                pm.freezec(id);
             }
             catch (Exception e)
             {
@@ -299,7 +305,9 @@ namespace PuppetMaster
             {
                 int id = int.Parse(matches[0].Groups[1].Value);
 
-                MessageBox.Show("UNFREEZEC - Id: " + id);
+                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
+                pm.unfreezec(id);
             }
             catch (Exception e)
             {
