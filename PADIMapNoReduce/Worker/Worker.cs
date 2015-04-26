@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 
 namespace Worker
@@ -88,6 +89,7 @@ namespace Worker
                 
                 CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
                 List<byte> bytes = client.processBytes(byteInterval, filePath);
+                Console.WriteLine("Worker.work() - received split data from worker");
 
                 CURRENT_STATUS = STATUS.WORKER_WORKING;
                 List<string> finalLines = new List<string>();
@@ -97,6 +99,7 @@ namespace Worker
                 finalLines.AddRange(lines);
 
                 string mapResult = map(ref finalLines);
+                Console.WriteLine("Worker.work() - finished mapping split");
                 client.receiveProcessData(mapResult, fileSplits.nrSplits);
             }
             else
@@ -132,13 +135,13 @@ namespace Worker
                 PERCENTAGE_FINISHED = i / lines.Count;
             }
 
-            string output = "";
+            StringBuilder sb = new StringBuilder();
             foreach (KeyValuePair<string, string> p in result)
             {
-                string format = "key: " + p.Key + ", value: " + p.Value;
-                output += format + Environment.NewLine;
+                sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
             }
-            return output;
+
+            return sb.ToString();
         }
 
         public void sendImAlive(Object state)
