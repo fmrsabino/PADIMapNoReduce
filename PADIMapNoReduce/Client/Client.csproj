@@ -49,7 +49,6 @@
     <Compile Include="UserApplicationForm.Designer.cs">
       <DependentUpon>UserApplicationForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="UserLevelApp.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
