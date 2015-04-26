@@ -88,19 +88,25 @@ namespace Worker
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
                 
                 CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
-                List<byte> bytes = client.processBytes(byteInterval, filePath);
+                List<byte> splitBytes = client.processBytes(byteInterval, filePath);
                 Console.WriteLine("Worker.work() - received split data from worker");
 
                 CURRENT_STATUS = STATUS.WORKER_WORKING;
-                List<string> finalLines = new List<string>();
-                byte[] temp = bytes.ToArray();
-                string result = System.Text.Encoding.UTF8.GetString(temp);
-                string[] lines = result.Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
-                finalLines.AddRange(lines);
+                
+                byte[] splitBytesArr = splitBytes.ToArray();
+                splitBytes.Clear();
+                string result = System.Text.Encoding.UTF8.GetString(splitBytesArr);
+                string[] splitLines = result.Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
+                result = "";
+                //List<string> finalLines = new List<string>();
+                //finalLines.AddRange(splitLines);
 
-                byte[] mapResult = map(ref finalLines);
-                Console.WriteLine("Worker.work() - finished mapping split");
-                client.receiveProcessData(mapResult, fileSplits.nrSplits);
+                byte[] mapBytes;
+                if (map(ref splitLines, out mapBytes))
+                {
+                    Console.WriteLine("Worker.work() - finished mapping split");
+                    client.receiveProcessData(mapBytes, fileSplits.nrSplits);
+                }
             }
             else
             {
@@ -110,7 +116,7 @@ namespace Worker
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
         }
 
-        private byte[] map(ref List<string> lines)
+        private bool map(ref string[] lines, out byte[] bytes)
         {
             List<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
             // Dynamically Invoke the method 
@@ -132,10 +138,8 @@ namespace Worker
                 }
                 // For STATUS command of PuppetMaster
                 i++;
-                PERCENTAGE_FINISHED = i / lines.Count;
+                PERCENTAGE_FINISHED = i / lines.Length;
             }
-
-            lines.Clear();
 
             StringBuilder sb = new StringBuilder();
             foreach (KeyValuePair<string, string> p in result)
@@ -143,7 +147,8 @@ namespace Worker
                 sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
             }
 
-            return Encoding.UTF8.GetBytes(sb.ToString());
+            bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            return true;
         }
 
         public void sendImAlive(Object state)
