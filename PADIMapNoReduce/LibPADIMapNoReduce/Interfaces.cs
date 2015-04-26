@@ -29,7 +29,7 @@ namespace PADIMapNoReduce {
         // Receives bytes and returns the lines corresponding to those bytes
         List<byte> processBytes(Pair<long, long> byteInterval, string filePath);
         //Receives processed data from workers
-        void receiveProcessData(string output, int nrSplit);
+        void receiveProcessData(byte[] output, int nrSplit);
         //Receives notification from JobTracker that job has concluded
         void jobConcluded();
     }

@@ -98,7 +98,7 @@ namespace Worker
                 string[] lines = result.Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                 finalLines.AddRange(lines);
 
-                string mapResult = map(ref finalLines);
+                byte[] mapResult = map(ref finalLines);
                 Console.WriteLine("Worker.work() - finished mapping split");
                 client.receiveProcessData(mapResult, fileSplits.nrSplits);
             }
@@ -110,7 +110,7 @@ namespace Worker
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
         }
 
-        private string map(ref List<string> lines)
+        private byte[] map(ref List<string> lines)
         {
             List<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
             // Dynamically Invoke the method 
@@ -135,13 +135,15 @@ namespace Worker
                 PERCENTAGE_FINISHED = i / lines.Count;
             }
 
+            lines.Clear();
+
             StringBuilder sb = new StringBuilder();
             foreach (KeyValuePair<string, string> p in result)
             {
                 sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
             }
 
-            return sb.ToString();
+            return Encoding.UTF8.GetBytes(sb.ToString());
         }
 
         public void sendImAlive(Object state)

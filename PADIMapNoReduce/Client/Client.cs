@@ -185,10 +185,12 @@ namespace Client
             }
         }
 
-        public void receiveProcessData(string output, int n)
+        public void receiveProcessData(byte[] bytes, int n)
         {
-            String outputFilePath = outputFolderPath + "/" + n + ".out";
-            System.IO.File.WriteAllText(outputFilePath, output);
+            using (BinaryWriter writer = new BinaryWriter(File.Open(outputFolderPath + "/" + n + ".out", FileMode.Create))) {
+                writer.Write(bytes);
+            }
+            //System.IO.File.WriteAllText(outputFilePath, output);
         }
 
         public void jobConcluded()
