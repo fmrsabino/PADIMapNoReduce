@@ -93,20 +93,10 @@ namespace Worker
 
                 CURRENT_STATUS = STATUS.WORKER_WORKING;
                 
-                byte[] splitBytesArr = splitBytes.ToArray();
+                string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                 splitBytes.Clear();
-                string result = System.Text.Encoding.UTF8.GetString(splitBytesArr);
-                string[] splitLines = result.Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
-                result = "";
-                //List<string> finalLines = new List<string>();
-                //finalLines.AddRange(splitLines);
 
-                byte[] mapBytes;
-                if (map(ref splitLines, out mapBytes))
-                {
-                    Console.WriteLine("Worker.work() - finished mapping split");
-                    client.receiveProcessData(mapBytes, fileSplits.nrSplits);
-                }
+                map(ref splitLines, fileSplits.nrSplits);
             }
             else
             {
@@ -116,38 +106,59 @@ namespace Worker
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
         }
 
-        private bool map(ref string[] lines, out byte[] bytes)
+        private bool map(ref string[] lines, int splitId)
         {
+            Console.WriteLine("========START MAP========");
+            PADIMapNoReduce.IClient client =
+                    (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
+            StringBuilder sb = new StringBuilder();
             List<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
             // Dynamically Invoke the method 
             int i = 0; // For STATUS command of PuppetMaster
-            foreach (string line in lines)
+            for (int j = 0; j < lines.Length; j++)
             {
-                object[] args = new object[] { line };
-                object resultObject = type.InvokeMember("Map",
-                    BindingFlags.Default | BindingFlags.InvokeMethod,
-                        null,
-                        classObj,
-                        args);
+                    object[] args = new object[] { lines[j] };
+                    object resultObject = type.InvokeMember("Map",
+                        BindingFlags.Default | BindingFlags.InvokeMethod,
+                            null,
+                            classObj,
+                            args);
 
-                IList<KeyValuePair<string, string>> tempResult = (IList<KeyValuePair<string, string>>)resultObject;
-                //Can't join two ILists :(
-                foreach (KeyValuePair<string, string> p in tempResult)
-                {
-                    result.Add(p);
-                }
+                    result.AddRange((IList<KeyValuePair<string, string>>)resultObject);
+
+                    if (j % 1024 == 0)
+                    {
+                        //Console.WriteLine("Reached Batch Size... Sending data");
+                        sb = new StringBuilder();
+                        foreach (KeyValuePair<string, string> p in result)
+                        {
+                            sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
+                        }
+                        client.receiveProcessData(sb.ToString(), splitId);
+                        sb.Clear();
+                        result.Clear();
+                       // Console.WriteLine("Finished Sending Batch");
+                    }
+                
                 // For STATUS command of PuppetMaster
                 i++;
                 PERCENTAGE_FINISHED = i / lines.Length;
             }
 
-            StringBuilder sb = new StringBuilder();
-            foreach (KeyValuePair<string, string> p in result)
+            //Console.WriteLine("Send last bits of data");
+            if (result.Count != 0) //send the rest
             {
-                sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
+                foreach (KeyValuePair<string, string> p in result)
+                {
+                    sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
+                }
+                client.receiveProcessData(sb.ToString(), splitId);
+                sb.Clear();
+                result.Clear();
             }
+            //Console.WriteLine("Finished Sending!");
 
-            bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            Console.WriteLine("========END MAP========");
             return true;
         }
 
