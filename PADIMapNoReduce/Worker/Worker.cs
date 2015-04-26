@@ -31,8 +31,10 @@ namespace Worker
         public static STATUS CURRENT_STATUS;
         public static float PERCENTAGE_FINISHED;
 
+        // For FREEZEs
         static object workerMonitor;
         static object jobtrackerMonitor;
+        static object mapperMonitor; // For SLOWW
 
         public override object InitializeLifetimeService()
         {
@@ -52,6 +54,7 @@ namespace Worker
             this.jobTrackerUrl = jobTrackerUrl;
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
             workerMonitor = new object();
+            mapperMonitor = new object();
         }
 
         /**** WorkerImpl ****/
@@ -86,6 +89,7 @@ namespace Worker
         public void work(LibPADIMapNoReduce.FileSplits fileSplits)
         {
             handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
+            handleSlowMap(); // For handling SLOWW from PuppetMaster
             CURRENT_STATUS = STATUS.WORKER_WORKING; // For STATUS command of PuppetMaster
             PERCENTAGE_FINISHED = 0;
             PADIMapNoReduce.Pair<long, long> byteInterval = fileSplits.pair;
@@ -117,6 +121,7 @@ namespace Worker
         private bool map(ref string[] lines, int splitId)
         {
             handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
+            handleSlowMap(); // For handling SLOWW from PuppetMaster
             Console.WriteLine("========START MAP========");
             PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
@@ -127,6 +132,7 @@ namespace Worker
             for (int j = 0; j < lines.Length; j++)
             {
                 handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
+                handleSlowMap(); // For handling SLOWW from PuppetMaster
                 object[] args = new object[] { lines[j] };
                     object resultObject = type.InvokeMember("Map",
                         BindingFlags.Default | BindingFlags.InvokeMethod,
@@ -366,9 +372,54 @@ namespace Worker
             }
         }
 
+        private void handleSlowMap()
+        {
+            lock (mapperMonitor)
+            {
+                if (CURRENT_STATUS == STATUS.WORKER_SLOWED)
+                {
+                    Console.WriteLine("[D] Worker slowed. Locking...");
+                    Monitor.Wait(mapperMonitor);
+                }
+            }
+        }
+
+        class signallingThread
+        {
+            public static void signalAllThreads(int seconds)
+            {
+                Thread.Sleep(seconds*1000);
+                lock (mapperMonitor)
+                {
+                    if (CURRENT_STATUS == STATUS.WORKER_SLOWED)
+                    {
+                        Console.WriteLine("[D] Speeding worker...");
+                        CURRENT_STATUS = PREVIOUS_STATUS;
+                        Monitor.PulseAll(mapperMonitor);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[D] Something wrong happened on signalling threads slowed on worker...");
+                    }
+                }
+            }
+        }
+
         public void sloww(int seconds)
         {
-            throw new NotImplementedException();
+            if (CURRENT_STATUS != STATUS.WORKER_SLOWED)
+            {
+                Console.WriteLine("[D] Slowing worker for " + seconds + " seconds...");
+                PREVIOUS_STATUS = CURRENT_STATUS;
+                CURRENT_STATUS = STATUS.WORKER_SLOWED;
+                // Initiate a new thread for signaling all paused threads
+                Thread t = new Thread(() => signallingThread.signalAllThreads(seconds));
+                t.Start();
+            }
+            else
+            {
+                Console.WriteLine("[D] Slow called on worker, but it's already slowed...");
+            }
         }
 
         public void freezew()
@@ -397,7 +448,7 @@ namespace Worker
                 }
                 else
                 {
-                    Console.WriteLine("[D] Freeze called on worker, but it's already unfrozen...");
+                    Console.WriteLine("[D] Unfreeze called on worker, but it's already unfrozen...");
                 }
             }
         }
@@ -429,7 +480,7 @@ namespace Worker
                 }
                 else
                 {
-                    Console.WriteLine("[D] Freeze called on job tracker, but it's already unfrozen...");
+                    Console.WriteLine("[D] Unfreeze called on job tracker, but it's already unfrozen...");
                 }
             }
 
