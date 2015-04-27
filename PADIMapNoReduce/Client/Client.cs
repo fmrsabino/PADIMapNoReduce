@@ -28,7 +28,7 @@ namespace Client
 
         public List<byte> processBytes(PADIMapNoReduce.Pair<long, long> byteInterval, string filePath)
         {
-            System.Console.WriteLine("Received request for bytes from " + byteInterval.First + " to " + byteInterval.Second);
+            //System.Console.WriteLine("Received request for bytes from " + byteInterval.First + " to " + byteInterval.Second);
 
             List<byte> result = new List<byte>();
 

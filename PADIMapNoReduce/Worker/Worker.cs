@@ -9,6 +9,11 @@ namespace Worker
     class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
         public const string WORKER_OBJECT_URI = "W";
+        
+        // The number of bytes requested to the client
+        public const long BATCH_REQUEST_SIZE = 102400;
+        // The number of lines of the map result sent to the client
+        public const long BATCH_LINES = 1024;
 
         private List<string> workers = new List<string>();
         private Queue<LibPADIMapNoReduce.FileSplits> jobQueue;
@@ -96,19 +101,50 @@ namespace Worker
             Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
             if (workerSetup)
             {
+                long splitSize = byteInterval.Second - byteInterval.First;
+
                 PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
-                
-                CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
-                List<byte> splitBytes = client.processBytes(byteInterval, filePath);
-                Console.WriteLine("Worker.work() - received split data from worker");
 
-                CURRENT_STATUS = STATUS.WORKER_WORKING;
-                
-                string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
-                splitBytes.Clear();
+                if (splitSize <= BATCH_REQUEST_SIZE) //Request all
+                {
+                    CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
+                    List<byte> splitBytes = client.processBytes(byteInterval, filePath);
 
-                map(ref splitLines, fileSplits.nrSplits);
+                    CURRENT_STATUS = STATUS.WORKER_WORKING;
+
+                    string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
+                    splitBytes.Clear();
+
+                    map(ref splitLines, fileSplits.nrSplits);
+                }
+                else //request batch
+                {
+                    for (long i = byteInterval.First; i < byteInterval.Second; i += BATCH_REQUEST_SIZE)
+                    {
+                        PADIMapNoReduce.Pair<long, long> miniByteInterval;
+                        if (i + BATCH_REQUEST_SIZE > byteInterval.Second)
+                        {
+                            miniByteInterval = new PADIMapNoReduce.Pair<long, long>(i, byteInterval.Second);
+                        }
+                        else
+                        {
+                            miniByteInterval = new PADIMapNoReduce.Pair<long, long>(i, i+BATCH_REQUEST_SIZE);
+                        }
+                          
+                        
+                        CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
+                        List<byte> splitBytes = client.processBytes(miniByteInterval, filePath);
+
+                        CURRENT_STATUS = STATUS.WORKER_WORKING;
+
+                        string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
+                        splitBytes.Clear();
+
+                        map(ref splitLines, fileSplits.nrSplits);
+                    }
+                }
+                 
             }
             else
             {
@@ -122,7 +158,7 @@ namespace Worker
         {
             handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
             handleSlowMap(); // For handling SLOWW from PuppetMaster
-            Console.WriteLine("========START MAP========");
+            
             PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
             StringBuilder sb = new StringBuilder();
@@ -142,9 +178,8 @@ namespace Worker
 
                     result.AddRange((IList<KeyValuePair<string, string>>)resultObject);
 
-                    if (j % 1024 == 0)
+                    if (j % BATCH_LINES == 0)
                     {
-                        //Console.WriteLine("Reached Batch Size... Sending data");
                         sb = new StringBuilder();
                         foreach (KeyValuePair<string, string> p in result)
                         {
@@ -153,7 +188,6 @@ namespace Worker
                         client.receiveProcessData(sb.ToString(), splitId);
                         sb.Clear();
                         result.Clear();
-                       // Console.WriteLine("Finished Sending Batch");
                     }
                 
                 // For STATUS command of PuppetMaster
@@ -161,7 +195,6 @@ namespace Worker
                 PERCENTAGE_FINISHED = i / lines.Length;
             }
 
-            //Console.WriteLine("Send last bits of data");
             if (result.Count != 0) //send the rest
             {
                 foreach (KeyValuePair<string, string> p in result)
@@ -172,9 +205,7 @@ namespace Worker
                 sb.Clear();
                 result.Clear();
             }
-            //Console.WriteLine("Finished Sending!");
 
-            Console.WriteLine("========END MAP========");
             return true;
         }
 
