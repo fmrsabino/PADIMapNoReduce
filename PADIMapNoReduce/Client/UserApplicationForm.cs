@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
-using System.Threading;
 using System.Windows.Forms;
 
 namespace Client
@@ -23,9 +22,7 @@ namespace Client
 
         private delegate void JobDelegate();
         private JobDelegate jobDelegate;
-
         private JobDelegate activateButton;
-
 
         public UserApplicationForm()
         {
