@@ -191,7 +191,6 @@ namespace Client
             {
                 writer.Write(lines);
             }
-            //System.IO.File.WriteAllText(outputFilePath, output);*/
         }
 
         public void jobConcluded()

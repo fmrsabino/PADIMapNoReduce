@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Client
@@ -20,13 +21,22 @@ namespace Client
         private string dllClassName;
         private string entryUrl;
 
+        private delegate void JobDelegate();
+        private JobDelegate jobDelegate;
+
+        private JobDelegate activateButton;
+
+
         public UserApplicationForm()
         {
             InitializeComponent();
+            activateButton = new JobDelegate(activateSubmitButton);
         }
+
 
         public UserApplicationForm(string entryUrl, string inputFilePath, string outputPath, int nrSplits, string mapperClassName, string dllPath)
         {
+            activateButton = new JobDelegate(activateSubmitButton);
             this.clientPort = DEFAULCLIENTPORT;
             this.entryUrl = entryUrl;
             this.inputFilePath = inputFilePath;
@@ -49,8 +59,11 @@ namespace Client
             classNameValue.Text = dllClassName;
             button1.Enabled = false;
             createClient();
-            submitJob();
-            button2.Enabled = true;
+
+            jobDelegate = new JobDelegate(this.submitJob);
+            jobDelegate.BeginInvoke(submitDone, null);
+            button2.Enabled = false;
+
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -104,7 +117,18 @@ namespace Client
 
         private void button2_Click(object sender, EventArgs e)
         {
-            submitJob();
+            jobDelegate = new JobDelegate(this.submitJob);
+            jobDelegate.BeginInvoke(submitDone, null);
+            button2.Enabled = false;
+        }
+
+        private void submitDone(IAsyncResult ar)
+        {
+            this.Invoke(activateButton, null);
+        }
+
+        private void activateSubmitButton()
+        {
             button2.Enabled = true;
         }
 
@@ -184,12 +208,8 @@ namespace Client
                 {
                     dllClassName = classNameValue.Text;
                 }
-                if (dllClassName != "Mapper") {
-                    System.Console.WriteLine("Could not find any dllClass name: " + dllClassName);
-                    return;
-                }
 
-                button2.Enabled = false;
+                
                 client.submitJob(inputFilePath, splits, outputFolderPath, fileSize, dllLocation, dllClassName);
 
             }

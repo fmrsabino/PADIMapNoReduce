@@ -11,9 +11,9 @@ namespace Worker
         public const string WORKER_OBJECT_URI = "W";
         
         // The number of bytes requested to the client
-        public const long BATCH_REQUEST_SIZE = 102400;
+        public const long BATCH_REQUEST_SIZE = 10240000;
         // The number of lines of the map result sent to the client
-        public const long BATCH_LINES = 1024;
+        public const long BATCH_LINES = 102400;
 
         private List<string> workers = new List<string>();
         private Queue<LibPADIMapNoReduce.FileSplits> jobQueue;
