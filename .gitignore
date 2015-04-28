@@ -183,3 +183,4 @@ UpgradeLog*.htm
 FakesAssemblies/
 
 pl2000.txt
+*.out
