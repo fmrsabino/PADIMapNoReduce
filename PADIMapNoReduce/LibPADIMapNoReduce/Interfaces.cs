@@ -17,6 +17,7 @@ namespace PADIMapNoReduce {
         void printStatus();
         void freezec();
         void unfreezec();
+        void checkWorkerStatus(Object state);
     }
 
     public interface IWorker : IJobTracker
@@ -27,6 +28,7 @@ namespace PADIMapNoReduce {
         void sloww(int seconds);
         void freezew();
         void unfreezew();
+        bool isAlive();
     }
 
     public interface IClient
