@@ -3,14 +3,14 @@
 namespace LibPADIMapNoReduce
 {
     [Serializable]
-    public class FileSplits
+    public class FileSplit
     {
-        public int nrSplits;
+        public int splitId;
         public PADIMapNoReduce.Pair<long, long> pair;
 
-        public FileSplits(int i, PADIMapNoReduce.Pair<long, long> pair)
+        public FileSplit(int i, PADIMapNoReduce.Pair<long, long> pair)
         {
-            this.nrSplits = i;
+            this.splitId = i;
             this.pair = pair;
         }
 

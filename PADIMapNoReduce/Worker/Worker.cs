@@ -78,7 +78,7 @@ namespace Worker
             workerSetup = true;
         }
 
-        public void work(LibPADIMapNoReduce.FileSplits fileSplits)
+        public void work(LibPADIMapNoReduce.FileSplit fileSplits)
         {
             handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
             handleSlowMap(); // For handling SLOWW from PuppetMaster
@@ -103,7 +103,7 @@ namespace Worker
                     string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                     splitBytes.Clear();
 
-                    map(ref splitLines, fileSplits.nrSplits);
+                    map(ref splitLines, fileSplits.splitId);
                 }
                 else //request batch
                 {
@@ -128,7 +128,7 @@ namespace Worker
                         string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                         splitBytes.Clear();
 
-                        map(ref splitLines, fileSplits.nrSplits);
+                        map(ref splitLines, fileSplits.splitId);
                     }
                 }
                  

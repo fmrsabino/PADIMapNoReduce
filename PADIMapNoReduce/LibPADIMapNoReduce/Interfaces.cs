@@ -23,7 +23,7 @@ namespace PADIMapNoReduce {
     public interface IWorker : IJobTracker
     {
         void setup(byte[] code, string className, string clientUrl, string filePath);
-        void work(FileSplits fileSplits);
+        void work(FileSplit fileSplits);
         void sendImAlive(Object state);
         string getUrl();
         void sloww(int seconds);
@@ -40,6 +40,7 @@ namespace PADIMapNoReduce {
         void receiveProcessData(string lines, int nrSplit);
         //Receives notification from JobTracker that job has concluded
         void jobConcluded();
+        void removeFile(int splitId);
     }
 
     public interface IPuppetMaster

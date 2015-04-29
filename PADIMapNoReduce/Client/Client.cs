@@ -197,5 +197,11 @@ namespace Client
         {
             System.Console.WriteLine("////////////JOB CONCLUDED/////////////////");
         }
+
+
+        public void removeFile(int splitId)
+        {
+            File.Delete(outputFolderPath + "/" + splitId + ".out");
+        }
     }
 }

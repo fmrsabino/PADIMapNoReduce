@@ -8,8 +8,8 @@ namespace Worker
     public partial class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
         private List<string> workers = new List<string>();
-        private ConcurrentQueue<LibPADIMapNoReduce.FileSplits> jobQueue;
-        private Dictionary<string, LibPADIMapNoReduce.FileSplits> onGoingWork = new Dictionary<string,LibPADIMapNoReduce.FileSplits>();
+        private ConcurrentQueue<LibPADIMapNoReduce.FileSplit> jobQueue;
+        private Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork = new Dictionary<string,LibPADIMapNoReduce.FileSplit>();
 
         private Timer timer;
         private const long ALIVE_TIME_INTERVAL_IN_MS = 10000;
@@ -27,6 +27,7 @@ namespace Worker
         {
             handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
             CURRENT_STATUS = STATUS.JOBTRACKER_WORKING; // For STATUS command of PuppetMaster
+            this.clientUrl = clientUrl;
 
             if (nSplits == 0)
             {
@@ -36,7 +37,7 @@ namespace Worker
 
             long splitBytes = nBytes / nSplits;
 
-            jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplits>();
+            jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>();
 
             for (int i = 0; i < nSplits; i++)
             {
@@ -53,7 +54,7 @@ namespace Worker
                 }
 
 
-                jobQueue.Enqueue(new LibPADIMapNoReduce.FileSplits(i, pair));
+                jobQueue.Enqueue(new LibPADIMapNoReduce.FileSplit(i, pair));
             }
 
             while (workers.Count == 0) { }
@@ -112,7 +113,7 @@ namespace Worker
 
             while (jobQueue.Count > 0)
             {
-                LibPADIMapNoReduce.FileSplits job = null;
+                LibPADIMapNoReduce.FileSplit job = null;
 
                 if (jobQueue.TryDequeue(out job))
                 {
@@ -177,11 +178,14 @@ namespace Worker
                     Console.WriteLine("Couldn't reach {0}. Marking as dead!", workers[i]);
                     deadWorkers.Add(workers[i]);
 
-                    LibPADIMapNoReduce.FileSplits split;
+                    LibPADIMapNoReduce.FileSplit split;
                     if (onGoingWork.TryGetValue(workers[i], out split))
                     {
                         // This means that the worker was working on the split
                         // TODO: Request client to remove previous unfinished split result 
+                        PADIMapNoReduce.IClient client =
+                    (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
+                        client.removeFile(split.splitId);
                         jobQueue.Enqueue(split);
                     }
                 }

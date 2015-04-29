@@ -23,7 +23,7 @@ namespace PuppetMaster
                 serviceURLparsed = new Uri(serviceURL);
                 workers.Add(id, "tcp://" + System.Environment.MachineName + ":" + serviceURLparsed.Port + "/W");
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 // Same id already exists. Not relaunching.
                 // Or serviceURL is not a valid URL
