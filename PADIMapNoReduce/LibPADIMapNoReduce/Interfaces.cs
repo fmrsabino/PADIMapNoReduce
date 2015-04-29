@@ -25,6 +25,7 @@ namespace PADIMapNoReduce {
         void setup(byte[] code, string className, string clientUrl, string filePath);
         void work(FileSplits fileSplits);
         void sendImAlive(Object state);
+        string getUrl();
         void sloww(int seconds);
         void freezew();
         void unfreezew();

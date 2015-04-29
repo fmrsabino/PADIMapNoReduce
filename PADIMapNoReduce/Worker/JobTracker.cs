@@ -8,6 +8,7 @@ namespace Worker
     {
         private List<string> workers = new List<string>();
         private Queue<LibPADIMapNoReduce.FileSplits> jobQueue;
+        private Dictionary<string, LibPADIMapNoReduce.FileSplits> onGoingWork = new Dictionary<string,LibPADIMapNoReduce.FileSplits>();
 
         private Timer timer;
         private const long ALIVE_TIME_INTERVAL_IN_MS = 10000;
@@ -100,10 +101,13 @@ namespace Worker
             }
         }
 
+        //Thread for each worker
         private void sendWork(Object obj)
         {
             KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent> pair = (KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent>)obj;
             PADIMapNoReduce.IWorker worker = pair.Key;
+            //TODO: USE LOCAL WORKER URL SINCE JT HAVE THEM ALL AND DO NOT MAKE THIS REMOTE CALL
+            string workerUrl = worker.getUrl();
 
             while (jobQueue.Count > 0)
             {
@@ -119,7 +123,25 @@ namespace Worker
                         break;
                     }
                 }
-                worker.work(job);
+
+                try
+                {
+                    
+                    if (onGoingWork.ContainsKey(workerUrl)) //UPDATE
+                    {
+                        onGoingWork[workerUrl] = job;
+                    }
+                    else //ADD
+                    {
+                        onGoingWork.Add(workerUrl, job);
+                    }
+                    worker.work(job);
+                }
+                catch (System.Net.Sockets.SocketException)
+                {
+                    // The worker is probably down but it'll be removed when the job tracker checks if they are alive or not
+                    break; //Finish thread execution
+                }
             }
             //thread "notify" jobtracker that jobqueue is empty
             pair.Value.Set();
@@ -161,6 +183,14 @@ namespace Worker
                 {
                     Console.WriteLine("Couldn't reach {0}. Marking as dead!", workers[i]);
                     deadWorkers.Add(workers[i]);
+
+                    LibPADIMapNoReduce.FileSplits split;
+                    if (onGoingWork.TryGetValue(workers[i], out split))
+                    {
+                        // This means that the worker was working on the split
+                        // TODO: Request client to remove previous unfinished split result 
+                        jobQueue.Enqueue(split);
+                    }
                 }
             }
 

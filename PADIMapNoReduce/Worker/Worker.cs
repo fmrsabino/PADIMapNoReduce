@@ -392,5 +392,11 @@ namespace Worker
         {
             JOBTRACKER_WAITING, JOBTRACKER_WORKING, JOBTRACKER_FROZEN, WORKER_WAITING, WORKER_TRANSFERING_INPUT, WORKER_WORKING, WORKER_TRANSFERING_OUTPUT, WORKER_FROZEN, WORKER_SLOWED
         };
+
+
+        public string getUrl()
+        {
+            return url;
+        }
     }
 }
