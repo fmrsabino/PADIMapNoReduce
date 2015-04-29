@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -7,7 +8,7 @@ namespace Worker
     public partial class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
         private List<string> workers = new List<string>();
-        private Queue<LibPADIMapNoReduce.FileSplits> jobQueue;
+        private ConcurrentQueue<LibPADIMapNoReduce.FileSplits> jobQueue;
         private Dictionary<string, LibPADIMapNoReduce.FileSplits> onGoingWork = new Dictionary<string,LibPADIMapNoReduce.FileSplits>();
 
         private Timer timer;
@@ -35,7 +36,7 @@ namespace Worker
 
             long splitBytes = nBytes / nSplits;
 
-            jobQueue = new Queue<LibPADIMapNoReduce.FileSplits>();
+            jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplits>();
 
             for (int i = 0; i < nSplits; i++)
             {
@@ -112,35 +113,27 @@ namespace Worker
             while (jobQueue.Count > 0)
             {
                 LibPADIMapNoReduce.FileSplits job = null;
-                lock (jobQueue)
+
+                if (jobQueue.TryDequeue(out job))
                 {
                     try
                     {
-                        job = jobQueue.Dequeue();
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        break;
-                    }
-                }
 
-                try
-                {
-                    
-                    if (onGoingWork.ContainsKey(workerUrl)) //UPDATE
-                    {
-                        onGoingWork[workerUrl] = job;
+                        if (onGoingWork.ContainsKey(workerUrl)) //UPDATE
+                        {
+                            onGoingWork[workerUrl] = job;
+                        }
+                        else //ADD
+                        {
+                            onGoingWork.Add(workerUrl, job);
+                        }
+                        worker.work(job);
                     }
-                    else //ADD
+                    catch (System.Net.Sockets.SocketException)
                     {
-                        onGoingWork.Add(workerUrl, job);
+                        // The worker is probably down but it'll be removed when the job tracker checks if they are alive or not
+                        break; //Finish thread execution
                     }
-                    worker.work(job);
-                }
-                catch (System.Net.Sockets.SocketException)
-                {
-                    // The worker is probably down but it'll be removed when the job tracker checks if they are alive or not
-                    break; //Finish thread execution
                 }
             }
             //thread "notify" jobtracker that jobqueue is empty
@@ -179,7 +172,7 @@ namespace Worker
                 {
                     worker.isAlive();
                 }
-                catch (System.Net.Sockets.SocketException e)
+                catch (System.Net.Sockets.SocketException)
                 {
                     Console.WriteLine("Couldn't reach {0}. Marking as dead!", workers[i]);
                     deadWorkers.Add(workers[i]);

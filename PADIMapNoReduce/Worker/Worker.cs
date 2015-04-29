@@ -207,7 +207,7 @@ namespace Worker
                         (PADIMapNoReduce.IJobTracker) Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
             try {
                 jobTracker.registerImAlive(url);
-            } catch (System.Net.Sockets.SocketException e) {
+            } catch (System.Net.Sockets.SocketException) {
                 Console.WriteLine("Could't find JobTracker!");
             }
 
