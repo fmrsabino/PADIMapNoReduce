@@ -1,6 +1,7 @@
 ﻿using LibPADIMapNoReduce;
 using System;
 using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
 
 namespace PADIMapNoReduce {
     public interface IMapper
@@ -18,18 +19,20 @@ namespace PADIMapNoReduce {
         void freezec();
         void unfreezec();
         void checkWorkerStatus(Object state);
+        void notifySplitFinish(string workerUrl,LibPADIMapNoReduce.FileSplit fileSplits);
     }
 
     public interface IWorker : IJobTracker
     {
         void setup(byte[] code, string className, string clientUrl, string filePath);
+        [OneWay()]
         void work(FileSplit fileSplits);
         void sendImAlive(Object state);
         string getUrl();
         void sloww(int seconds);
         void freezew();
         void unfreezew();
-        bool isAlive();
+        bool isAlive(List<string> workers);
     }
 
     public interface IClient

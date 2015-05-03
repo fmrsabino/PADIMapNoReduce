@@ -139,6 +139,33 @@ namespace Worker
             }
             PERCENTAGE_FINISHED = 1; // For STATUS command of PuppetMaster
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
+
+            //Notify JobTracker
+            PADIMapNoReduce.IJobTracker jobTracker =
+                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+            try
+            {
+                jobTracker.notifySplitFinish(url, fileSplits);
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                Console.WriteLine("Couldn't contact to JobTracker! Searching for the new one...");
+                if (workers.Count > 0)
+                {
+                    if (workers[0] == url)
+                    {
+                        Console.WriteLine("I'm the new JobTracker");
+                        Console.Title = "JobTracker - " + url;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Contacting " + workers[0]);
+                        PADIMapNoReduce.IJobTracker newJobTracker =
+                            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), workers[0]);
+                        jobTracker.notifySplitFinish(url, fileSplits);
+                    }
+                }
+            }
         }
 
         private bool map(ref string[] lines, int splitId)
@@ -196,8 +223,9 @@ namespace Worker
             return true;
         }
 
-        public bool isAlive()
+        public bool isAlive(List<string> workers)
         {
+            this.workers = workers;
             return true;
         }
 
