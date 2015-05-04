@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
-using System.Collections.Concurrent;
 
 namespace PADIMapNoReduce {
     public interface IMapper
@@ -15,7 +14,6 @@ namespace PADIMapNoReduce {
         void registerJob
             (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName);
         bool registerWorker(string src);
-        void registerImAlive(string workerUrl);
         void printStatus();
         void freezec();
         void unfreezec();
@@ -28,8 +26,6 @@ namespace PADIMapNoReduce {
         void setup(byte[] code, string className, string clientUrl, string filePath);
         [OneWay()]
         void work(FileSplit fileSplits);
-        void sendImAlive(Object state);
-        string getUrl();
         void sloww(int seconds);
         void freezew();
         void unfreezew();

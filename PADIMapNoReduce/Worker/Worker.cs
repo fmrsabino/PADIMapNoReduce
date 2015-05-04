@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Threading;
-using System.Collections.Concurrent;
 
 namespace Worker
 {
@@ -244,22 +244,6 @@ namespace Worker
             return true;
         }
 
-        public void sendImAlive(Object state)
-        {
-            PADIMapNoReduce.IJobTracker jobTracker =
-                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
-            try
-            {
-                jobTracker.registerImAlive(url);
-            }
-            catch (System.Net.Sockets.SocketException)
-            {
-                Console.WriteLine("Could't find JobTracker!");
-            }
-
-            timer.Change(ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
-        }
-
         public void printStatus()
         {
             switch (CURRENT_STATUS)
@@ -439,10 +423,5 @@ namespace Worker
             JOBTRACKER_WAITING, JOBTRACKER_WORKING, JOBTRACKER_FROZEN, WORKER_WAITING, WORKER_TRANSFERING_INPUT, WORKER_WORKING, WORKER_TRANSFERING_OUTPUT, WORKER_FROZEN, WORKER_SLOWED
         };
 
-
-        public string getUrl()
-        {
-            return url;
-        }
     }
 }

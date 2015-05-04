@@ -61,7 +61,6 @@ namespace Worker
                 jobQueue.Enqueue(new LibPADIMapNoReduce.FileSplit(i, pair));
             }
 
-            while (workers.Count == 0) { }
 
             //Distribute to each worker one split
             for (int i = 0; i < workers.Count; i++)
@@ -109,44 +108,6 @@ namespace Worker
             }
         }
 
-        //Thread for each worker
-        private void sendWork(Object obj)
-        {
-            KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent> pair = (KeyValuePair<PADIMapNoReduce.IWorker, ManualResetEvent>)obj;
-            PADIMapNoReduce.IWorker worker = pair.Key;
-            //TODO: USE LOCAL WORKER URL SINCE JT HAVE THEM ALL AND DO NOT MAKE THIS REMOTE CALL
-            string workerUrl = worker.getUrl();
-
-            while (jobQueue.Count > 0)
-            {
-                LibPADIMapNoReduce.FileSplit job = null;
-
-                if (jobQueue.TryDequeue(out job))
-                {
-                    try
-                    {
-
-                        if (onGoingWork.ContainsKey(workerUrl)) //UPDATE
-                        {
-                            onGoingWork[workerUrl] = job;
-                        }
-                        else //ADD
-                        {
-                            onGoingWork.Add(workerUrl, job);
-                        }
-                        worker.work(job);
-                    }
-                    catch (System.Net.Sockets.SocketException)
-                    {
-                        // The worker is probably down but it'll be removed when the job tracker checks if they are alive or not
-                        break; //Finish thread execution
-                    }
-                }
-            }
-            //thread "notify" jobtracker that jobqueue is empty
-            pair.Value.Set();
-        }
-
         public bool registerWorker(string workerUrl)
         {
             handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
@@ -161,11 +122,6 @@ namespace Worker
                 System.Console.WriteLine(workerUrl + " is already registered.");
                 return false;
             }
-        }
-
-        public void registerImAlive(string workerUrl)
-        {
-            Console.WriteLine("I'M ALIVE from " + workerUrl);
         }
 
         public void checkWorkerStatus(Object state)
