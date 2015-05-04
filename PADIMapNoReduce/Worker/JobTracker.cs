@@ -8,11 +8,11 @@ namespace Worker
     public partial class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
         private List<string> workers = new List<string>();
-        private ConcurrentQueue<LibPADIMapNoReduce.FileSplit> jobQueue;
+        private ConcurrentQueue<LibPADIMapNoReduce.FileSplit> jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>();
         private Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork = new Dictionary<string, LibPADIMapNoReduce.FileSplit>();
 
         private Timer timer;
-        private const long ALIVE_TIME_INTERVAL_IN_MS = 10000;
+        private const long ALIVE_TIME_INTERVAL_IN_MS = 1000;
 
         public Worker(string jobTrackerUrl)
         {
@@ -36,8 +36,6 @@ namespace Worker
             }
 
             long splitBytes = nBytes / nSplits;
-
-            jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>();
 
             for (int i = 0; i < nSplits; i++)
             {
@@ -86,6 +84,8 @@ namespace Worker
                     worker.work(job);
                 }
             }
+
+            checkWorkerStatus(null);
 
             try
             {
@@ -171,7 +171,7 @@ namespace Worker
                         (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i]);
                 try
                 {
-                    worker.isAlive(workers);
+                    worker.isAlive(workers, jobQueue.ToArray(), onGoingWork);
                 }
                 catch (System.Net.Sockets.SocketException)
                 {

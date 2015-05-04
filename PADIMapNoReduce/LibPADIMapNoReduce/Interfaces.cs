@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
+using System.Collections.Concurrent;
 
 namespace PADIMapNoReduce {
     public interface IMapper
@@ -32,7 +33,7 @@ namespace PADIMapNoReduce {
         void sloww(int seconds);
         void freezew();
         void unfreezew();
-        bool isAlive(List<string> workers);
+        bool isAlive(List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork);
     }
 
     public interface IClient
