@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Collections.Concurrent;
 
 namespace Worker
 {
     public partial class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
         public const string WORKER_OBJECT_URI = "W";
-        
+
         // The number of bytes requested to the client
         public const long BATCH_REQUEST_SIZE = 10240000;
         // The number of lines of the map result sent to the client
@@ -26,8 +27,8 @@ namespace Worker
         private string mapperClass;
         private string filePath;
         private bool workerSetup = false;
-        
-        
+
+
         public static STATUS PREVIOUS_STATUS;
         public static STATUS CURRENT_STATUS;
         public static float PERCENTAGE_FINISHED;
@@ -49,6 +50,7 @@ namespace Worker
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
             workerMonitor = new object();
             mapperMonitor = new object();
+            jobtrackerMonitor = new object();
         }
 
         public void setup(byte[] code, string className, string clientUrl, string filePath)
@@ -116,10 +118,10 @@ namespace Worker
                         }
                         else
                         {
-                            miniByteInterval = new PADIMapNoReduce.Pair<long, long>(i, i+BATCH_REQUEST_SIZE);
+                            miniByteInterval = new PADIMapNoReduce.Pair<long, long>(i, i + BATCH_REQUEST_SIZE);
                         }
-                          
-                        
+
+
                         CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
                         List<byte> splitBytes = client.processBytes(miniByteInterval, filePath);
 
@@ -131,7 +133,7 @@ namespace Worker
                         map(ref splitLines, fileSplits.splitId);
                     }
                 }
-                 
+
             }
             else
             {
@@ -140,31 +142,42 @@ namespace Worker
             PERCENTAGE_FINISHED = 1; // For STATUS command of PuppetMaster
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
 
-            //Notify JobTracker
-            PADIMapNoReduce.IJobTracker jobTracker =
-                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
-            try
+
+            if (jobTrackerUrl != url)
             {
-                jobTracker.notifySplitFinish(url, fileSplits);
-            }
-            catch (System.Net.Sockets.SocketException)
-            {
-                Console.WriteLine("Couldn't contact to JobTracker! Searching for the new one...");
-                if (workers.Count > 0)
+                //Notify JobTracker
+                PADIMapNoReduce.IJobTracker jobTracker =
+                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                try
                 {
-                    if (workers[0] == url)
+                    jobTracker.notifySplitFinish(url, fileSplits);
+                }
+                catch (System.Net.Sockets.SocketException)
+                {
+                    Console.WriteLine("Couldn't contact to JobTracker! Searching for the new one...");
+                    if (workers.Count > 0)
                     {
-                        Console.WriteLine("I'm the new JobTracker");
-                        Console.Title = "JobTracker - " + url;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Contacting " + workers[0]);
-                        PADIMapNoReduce.IJobTracker newJobTracker =
-                            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), workers[0]);
-                        jobTracker.notifySplitFinish(url, fileSplits);
+                        if (workers[0] == url)
+                        {
+                            Console.WriteLine("I'm the new JobTracker");
+                            Console.Title = "JobTracker - " + url;
+                            jobTrackerUrl = url;
+                            timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+                            notifySplitFinish(url, fileSplits);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Contacting " + workers[0]);
+                            PADIMapNoReduce.IJobTracker newJobTracker =
+                                (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), workers[0]);
+                            newJobTracker.notifySplitFinish(url, fileSplits);
+                        }
                     }
                 }
+            }
+            else
+            {
+                notifySplitFinish(url, fileSplits);
             }
         }
 
@@ -172,7 +185,7 @@ namespace Worker
         {
             handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
             handleSlowMap(); // For handling SLOWW from PuppetMaster
-            
+
             PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
             StringBuilder sb = new StringBuilder();
@@ -184,26 +197,26 @@ namespace Worker
                 handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
                 handleSlowMap(); // For handling SLOWW from PuppetMaster
                 object[] args = new object[] { lines[j] };
-                    object resultObject = type.InvokeMember("Map",
-                        BindingFlags.Default | BindingFlags.InvokeMethod,
-                            null,
-                            classObj,
-                            args);
+                object resultObject = type.InvokeMember("Map",
+                    BindingFlags.Default | BindingFlags.InvokeMethod,
+                        null,
+                        classObj,
+                        args);
 
-                    result.AddRange((IList<KeyValuePair<string, string>>)resultObject);
+                result.AddRange((IList<KeyValuePair<string, string>>)resultObject);
 
-                    if (j % BATCH_LINES == 0)
+                if (j % BATCH_LINES == 0)
+                {
+                    sb = new StringBuilder();
+                    foreach (KeyValuePair<string, string> p in result)
                     {
-                        sb = new StringBuilder();
-                        foreach (KeyValuePair<string, string> p in result)
-                        {
-                            sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
-                        }
-                        client.receiveProcessData(sb.ToString(), splitId);
-                        sb.Clear();
-                        result.Clear();
+                        sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
                     }
-                
+                    client.receiveProcessData(sb.ToString(), splitId);
+                    sb.Clear();
+                    result.Clear();
+                }
+
                 // For STATUS command of PuppetMaster
                 i++;
                 PERCENTAGE_FINISHED = i / lines.Length;
@@ -223,19 +236,24 @@ namespace Worker
             return true;
         }
 
-        public bool isAlive(List<string> workers)
+        public bool isAlive(List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork)
         {
             this.workers = workers;
+            this.jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>(jobQueue);
+            this.onGoingWork = onGoingWork;
             return true;
         }
 
         public void sendImAlive(Object state)
         {
             PADIMapNoReduce.IJobTracker jobTracker =
-                        (PADIMapNoReduce.IJobTracker) Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
-            try {
+                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+            try
+            {
                 jobTracker.registerImAlive(url);
-            } catch (System.Net.Sockets.SocketException) {
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
                 Console.WriteLine("Could't find JobTracker!");
             }
 
@@ -259,7 +277,7 @@ namespace Worker
                     Console.WriteLine("[*] The Worker is waiting");
                     break;
                 case STATUS.WORKER_WORKING:
-                    Console.WriteLine("[*] The Worker is working. It's " + 100*PERCENTAGE_FINISHED + "% finished.");
+                    Console.WriteLine("[*] The Worker is working. It's " + 100 * PERCENTAGE_FINISHED + "% finished.");
                     break;
                 case STATUS.WORKER_TRANSFERING_INPUT:
                     Console.WriteLine("[*] The Worker is transfering input data from the client.");
@@ -316,7 +334,7 @@ namespace Worker
         {
             public static void signalAllThreads(int seconds)
             {
-                Thread.Sleep(seconds*1000);
+                Thread.Sleep(seconds * 1000);
                 lock (mapperMonitor)
                 {
                     if (CURRENT_STATUS == STATUS.WORKER_SLOWED)
