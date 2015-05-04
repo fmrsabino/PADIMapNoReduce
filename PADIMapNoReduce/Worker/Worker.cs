@@ -50,6 +50,7 @@ namespace Worker
             CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
             workerMonitor = new object();
             mapperMonitor = new object();
+            jobtrackerMonitor = new object();
         }
 
         public void setup(byte[] code, string className, string clientUrl, string filePath)

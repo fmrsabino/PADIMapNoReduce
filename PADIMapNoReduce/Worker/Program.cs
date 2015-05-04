@@ -83,7 +83,7 @@ namespace Worker
                                 RemotingServices.Marshal(
                                         worker,
                                         Worker.WORKER_OBJECT_URI,
-                                        typeof(PADIMapNoReduce.IJobTracker));
+                                        typeof(PADIMapNoReduce.IWorker));
 
                                 System.Console.WriteLine("JobTracker registred");
                                 Console.Title = "JobTracker - " + "tcp://" + System.Environment.MachineName + ":" + portInputFormatted;
@@ -141,7 +141,7 @@ namespace Worker
                     RemotingServices.Marshal(
                         worker,
                         Worker.WORKER_OBJECT_URI,
-                        typeof(PADIMapNoReduce.IJobTracker));
+                        typeof(PADIMapNoReduce.IWorker));
                 }
                 else
                 {

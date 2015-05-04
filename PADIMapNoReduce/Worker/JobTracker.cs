@@ -17,8 +17,11 @@ namespace Worker
         public Worker(string jobTrackerUrl)
         {
             this.url = jobTrackerUrl;
+            this.jobTrackerUrl = jobTrackerUrl;
             CURRENT_STATUS = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
             jobtrackerMonitor = new object();
+            workerMonitor = new object();
+            mapperMonitor = new object();
             timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
         }
 
@@ -28,6 +31,9 @@ namespace Worker
             handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
             CURRENT_STATUS = STATUS.JOBTRACKER_WORKING; // For STATUS command of PuppetMaster
             this.clientUrl = clientUrl;
+
+            //setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
+            workers.Add(url);
 
             if (nSplits == 0)
             {
@@ -167,6 +173,12 @@ namespace Worker
             List<string> deadWorkers = new List<string>();
             for (int i = 0; i < workers.Count; i++)
             {
+                //Do not send Alive to self
+                if (url == workers[i])
+                {
+                    continue;
+                }
+
                 PADIMapNoReduce.IWorker worker =
                         (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i]);
                 try
@@ -182,16 +194,24 @@ namespace Worker
                     if (onGoingWork.TryGetValue(workers[i], out split))
                     {
                         // This means that the worker was working on the split
-                        // TODO: Request client to remove previous unfinished split result 
                         PADIMapNoReduce.IClient client =
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
                         client.removeFile(split.splitId);
                         jobQueue.Enqueue(split);
+                        onGoingWork.Remove(workers[i]);
                     }
                 }
             }
 
             workers.RemoveAll(x => deadWorkers.Contains(x));
+            if (jobQueue.Count == 1 && onGoingWork.Count == 0)
+            {
+                LibPADIMapNoReduce.FileSplit job = null;
+                if (jobQueue.TryDequeue(out job))
+                {
+                    work(job);
+                }
+            }
 
             timer.Change(ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
         }
@@ -222,6 +242,10 @@ namespace Worker
                 {
                     // The worker is probably down but it'll be removed when the job tracker checks if they are alive or not
                 }
+            }
+            else
+            {
+                onGoingWork.Remove(workerUrl);
             }
         }
     }
