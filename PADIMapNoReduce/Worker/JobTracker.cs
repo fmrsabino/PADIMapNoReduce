@@ -23,6 +23,7 @@ namespace Worker
             workerMonitor = new object();
             mapperMonitor = new object();
             timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+            workers.Add(url);
         }
 
         public void registerJob
@@ -33,7 +34,6 @@ namespace Worker
             this.clientUrl = clientUrl;
 
             //setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
-            workers.Add(url);
 
             if (nSplits == 0)
             {
@@ -78,7 +78,7 @@ namespace Worker
                 LibPADIMapNoReduce.FileSplit job = null;
                 if (jobQueue.TryDequeue(out job))
                 {
-                    System.Console.Write(" job " + job.splitId);
+                    System.Console.Write(" job " + job.splitId + "\n");
                     if (onGoingWork.ContainsKey(workerUrl)) //UPDATE
                     {
                         onGoingWork[workerUrl] = job;

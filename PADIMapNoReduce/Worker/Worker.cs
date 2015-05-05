@@ -154,10 +154,11 @@ namespace Worker
                 }
                 catch (System.Net.Sockets.SocketException)
                 {
+                    
                     Console.WriteLine("Couldn't contact to JobTracker! Searching for the new one...");
                     if (workers.Count > 0)
                     {
-                        if (workers[0] == url)
+                        if (workers[1] == url)
                         {
                             Console.WriteLine("I'm the new JobTracker");
                             Console.Title = "JobTracker - " + url;
@@ -167,9 +168,10 @@ namespace Worker
                         }
                         else
                         {
-                            Console.WriteLine("Contacting " + workers[0]);
+                            Console.WriteLine("Contacting " + workers[1]);
+                            jobTrackerUrl = workers[1];
                             PADIMapNoReduce.IJobTracker newJobTracker =
-                                (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), workers[0]);
+                                (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), workers[1]);
                             newJobTracker.notifySplitFinish(url, fileSplits);
                         }
                     }
