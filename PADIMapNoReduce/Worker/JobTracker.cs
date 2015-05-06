@@ -33,8 +33,6 @@ namespace Worker
             CURRENT_STATUS = STATUS.JOBTRACKER_WORKING; // For STATUS command of PuppetMaster
             this.clientUrl = clientUrl;
 
-            //setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
-
             if (nSplits == 0)
             {
                 CURRENT_STATUS = STATUS.JOBTRACKER_WAITING;
@@ -70,7 +68,6 @@ namespace Worker
                 }
 
                 string workerUrl = workers[i];
-                System.Console.WriteLine(" O WORKER " + workerUrl + " VAI TRABBALHAR NO ");
                 PADIMapNoReduce.IWorker worker =
                         (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl);
                 worker.setup(mapperCode, mapperClassName, clientUrl, inputFilePath);
@@ -78,7 +75,6 @@ namespace Worker
                 LibPADIMapNoReduce.FileSplit job = null;
                 if (jobQueue.TryDequeue(out job))
                 {
-                    System.Console.Write(" job " + job.splitId + "\n");
                     if (onGoingWork.ContainsKey(workerUrl)) //UPDATE
                     {
                         onGoingWork[workerUrl] = job;
@@ -101,6 +97,20 @@ namespace Worker
             {
                 workers.Add(workerUrl);
                 System.Console.WriteLine("Registered " + workerUrl);
+
+                //When a worker appears after a job has began
+                if (workerSetup) {
+                    PADIMapNoReduce.IWorker worker =
+                        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl);
+                    worker.setup(mapperCode, mapperClass, clientUrl, filePath);
+
+                    LibPADIMapNoReduce.FileSplit job = null;
+                    if (jobQueue.TryDequeue(out job))
+                    {
+                        onGoingWork.Add(workerUrl, job);
+                        worker.work(job);
+                    }    
+                }
                 return true;
             }
             else
@@ -151,7 +161,9 @@ namespace Worker
                 LibPADIMapNoReduce.FileSplit job = null;
                 if (jobQueue.TryDequeue(out job))
                 {
-                    work(job);
+                    PADIMapNoReduce.IWorker worker =
+                            (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[0]);
+                    worker.work(job);
                 }
             }
 
