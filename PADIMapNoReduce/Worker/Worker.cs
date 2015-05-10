@@ -89,7 +89,7 @@ namespace Worker
         {
             handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
             handleSlowMap(); // For handling SLOWW from PuppetMaster
-            CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING; // For STATUS command of PuppetMaster
+            lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING; // For STATUS command of PuppetMaster
             PERCENTAGE_FINISHED = 0;
             PADIMapNoReduce.Pair<long, long> byteInterval = fileSplits.pair;
             Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
@@ -102,10 +102,10 @@ namespace Worker
 
                 if (splitSize <= BATCH_REQUEST_SIZE) //Request all
                 {
-                    CURRENT_STATUS_WORKER = STATUS.WORKER_TRANSFERING_INPUT;
+                    lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_TRANSFERING_INPUT;
                     List<byte> splitBytes = client.processBytes(byteInterval, filePath);
 
-                    CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING;
+                    lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING;
 
                     string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                     splitBytes.Clear();
@@ -127,11 +127,11 @@ namespace Worker
                             miniByteInterval = new PADIMapNoReduce.Pair<long, long>(i, i + BATCH_REQUEST_SIZE);
                         }
 
+                        lock(workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_TRANSFERING_INPUT;
 
-                        CURRENT_STATUS_WORKER = STATUS.WORKER_TRANSFERING_INPUT;
                         List<byte> splitBytes = client.processBytes(miniByteInterval, filePath);
 
-                        CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING;
+                        lock(workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING;
 
                         string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                         splitBytes.Clear();
@@ -149,7 +149,7 @@ namespace Worker
                 Console.WriteLine("Worker is not set");
             }
             PERCENTAGE_FINISHED = 1; // For STATUS command of PuppetMaster
-            CURRENT_STATUS_WORKER = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
+            lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
 
 
             if (jobTrackerUrl != url)
