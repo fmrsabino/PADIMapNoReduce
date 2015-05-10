@@ -29,9 +29,13 @@ namespace Worker
         private bool workerSetup = false;
 
 
-        public static STATUS PREVIOUS_STATUS;
-        public static STATUS CURRENT_STATUS;
+        public static STATUS PREVIOUS_STATUS_WORKER;
+        public static STATUS CURRENT_STATUS_WORKER;
+        public static STATUS PREVIOUS_STATUS_JOBTRACKER;
+        public static STATUS CURRENT_STATUS_JOBTRACKER;
         public static float PERCENTAGE_FINISHED;
+
+        public static int JOBTRACKER_COMM_TIMEOUT = 3000;
 
         // For FREEZEs
         static object workerMonitor;
@@ -47,7 +51,8 @@ namespace Worker
         {
             this.url = url;
             this.jobTrackerUrl = jobTrackerUrl;
-            CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
+            CURRENT_STATUS_WORKER = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
+            CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_DISABLED;
             workerMonitor = new object();
             mapperMonitor = new object();
             jobtrackerMonitor = new object();
@@ -84,7 +89,7 @@ namespace Worker
         {
             handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
             handleSlowMap(); // For handling SLOWW from PuppetMaster
-            CURRENT_STATUS = STATUS.WORKER_WORKING; // For STATUS command of PuppetMaster
+            lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING; // For STATUS command of PuppetMaster
             PERCENTAGE_FINISHED = 0;
             PADIMapNoReduce.Pair<long, long> byteInterval = fileSplits.pair;
             Console.WriteLine("Received job for bytes: " + byteInterval.First + " to " + byteInterval.Second);
@@ -97,10 +102,10 @@ namespace Worker
 
                 if (splitSize <= BATCH_REQUEST_SIZE) //Request all
                 {
-                    CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
+                    lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_TRANSFERING_INPUT;
                     List<byte> splitBytes = client.processBytes(byteInterval, filePath);
 
-                    CURRENT_STATUS = STATUS.WORKER_WORKING;
+                    lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING;
 
                     string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                     splitBytes.Clear();
@@ -122,11 +127,11 @@ namespace Worker
                             miniByteInterval = new PADIMapNoReduce.Pair<long, long>(i, i + BATCH_REQUEST_SIZE);
                         }
 
+                        lock(workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_TRANSFERING_INPUT;
 
-                        CURRENT_STATUS = STATUS.WORKER_TRANSFERING_INPUT;
                         List<byte> splitBytes = client.processBytes(miniByteInterval, filePath);
 
-                        CURRENT_STATUS = STATUS.WORKER_WORKING;
+                        lock(workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING;
 
                         string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                         splitBytes.Clear();
@@ -144,7 +149,7 @@ namespace Worker
                 Console.WriteLine("Worker is not set");
             }
             PERCENTAGE_FINISHED = 1; // For STATUS command of PuppetMaster
-            CURRENT_STATUS = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
+            lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
 
 
             if (jobTrackerUrl != url)
@@ -154,7 +159,11 @@ namespace Worker
                         (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
                 try
                 {
-                    jobTracker.notifySplitFinish(url, fileSplits);
+                    bool succeded = false;
+                    Thread thrd1 = new Thread(() => { jobTracker.notifySplitFinish(url, fileSplits); succeded = true; });
+                    thrd1.Start();
+                    thrd1.Join(JOBTRACKER_COMM_TIMEOUT);
+                    if (!succeded) throw new System.Net.Sockets.SocketException(); // Simulate a network exception if notify takes too long
                 }
                 catch (System.Net.Sockets.SocketException)
                 {
@@ -253,7 +262,7 @@ namespace Worker
 
         public void printStatus()
         {
-            switch (CURRENT_STATUS)
+            switch (CURRENT_STATUS_JOBTRACKER)
             {
                 case STATUS.JOBTRACKER_WAITING:
                     Console.WriteLine("[*] The JobTracker is waiting");
@@ -264,6 +273,9 @@ namespace Worker
                 case STATUS.JOBTRACKER_FROZEN:
                     Console.WriteLine("[*] The Job Tracker is frozen.");
                     break;
+            }
+            switch (CURRENT_STATUS_WORKER)
+            {
                 case STATUS.WORKER_WAITING:
                     Console.WriteLine("[*] The Worker is waiting");
                     break;
@@ -289,7 +301,7 @@ namespace Worker
         {
             lock (jobtrackerMonitor)
             {
-                if (CURRENT_STATUS == STATUS.JOBTRACKER_FROZEN)
+                if (CURRENT_STATUS_JOBTRACKER == STATUS.JOBTRACKER_FROZEN)
                 {
                     Console.WriteLine("[D] Job tracker frozen. Locking...");
                     Monitor.Wait(jobtrackerMonitor);
@@ -301,7 +313,7 @@ namespace Worker
         {
             lock (workerMonitor)
             {
-                if (CURRENT_STATUS == STATUS.WORKER_FROZEN)
+                if (CURRENT_STATUS_WORKER == STATUS.WORKER_FROZEN)
                 {
                     Console.WriteLine("[D] Worker frozen. Locking...");
                     Monitor.Wait(workerMonitor);
@@ -313,7 +325,7 @@ namespace Worker
         {
             lock (mapperMonitor)
             {
-                if (CURRENT_STATUS == STATUS.WORKER_SLOWED)
+                if (CURRENT_STATUS_WORKER == STATUS.WORKER_SLOWED)
                 {
                     Console.WriteLine("[D] Worker slowed. Locking...");
                     Monitor.Wait(mapperMonitor);
@@ -328,10 +340,10 @@ namespace Worker
                 Thread.Sleep(seconds * 1000);
                 lock (mapperMonitor)
                 {
-                    if (CURRENT_STATUS == STATUS.WORKER_SLOWED)
+                    if (CURRENT_STATUS_WORKER == STATUS.WORKER_SLOWED)
                     {
                         Console.WriteLine("[D] Speeding worker...");
-                        CURRENT_STATUS = PREVIOUS_STATUS;
+                        CURRENT_STATUS_WORKER = PREVIOUS_STATUS_WORKER;
                         Monitor.PulseAll(mapperMonitor);
                     }
                     else
@@ -344,11 +356,11 @@ namespace Worker
 
         public void sloww(int seconds)
         {
-            if (CURRENT_STATUS != STATUS.WORKER_SLOWED)
+            if (CURRENT_STATUS_WORKER != STATUS.WORKER_SLOWED)
             {
                 Console.WriteLine("[D] Slowing worker for " + seconds + " seconds...");
-                PREVIOUS_STATUS = CURRENT_STATUS;
-                CURRENT_STATUS = STATUS.WORKER_SLOWED;
+                PREVIOUS_STATUS_WORKER = CURRENT_STATUS_WORKER;
+                CURRENT_STATUS_WORKER = STATUS.WORKER_SLOWED;
                 // Initiate a new thread for signaling all paused threads
                 Thread t = new Thread(() => signallingThread.signalAllThreads(seconds));
                 t.Start();
@@ -361,11 +373,11 @@ namespace Worker
 
         public void freezew()
         {
-            if (CURRENT_STATUS != STATUS.WORKER_FROZEN)
+            if (CURRENT_STATUS_WORKER != STATUS.WORKER_FROZEN)
             {
                 Console.WriteLine("[D] Freezing worker...");
-                PREVIOUS_STATUS = CURRENT_STATUS;
-                CURRENT_STATUS = STATUS.WORKER_FROZEN;
+                PREVIOUS_STATUS_WORKER = CURRENT_STATUS_WORKER;
+                CURRENT_STATUS_WORKER = STATUS.WORKER_FROZEN;
             }
             else
             {
@@ -377,10 +389,10 @@ namespace Worker
         {
             lock (workerMonitor)
             {
-                if (CURRENT_STATUS == STATUS.WORKER_FROZEN)
+                if (CURRENT_STATUS_WORKER == STATUS.WORKER_FROZEN)
                 {
                     Console.WriteLine("[D] Unfreezing worker...");
-                    CURRENT_STATUS = PREVIOUS_STATUS;
+                    CURRENT_STATUS_WORKER = PREVIOUS_STATUS_WORKER;
                     Monitor.PulseAll(workerMonitor);
                 }
                 else
@@ -392,12 +404,11 @@ namespace Worker
 
         public void freezec()
         {
-            if (CURRENT_STATUS != STATUS.JOBTRACKER_FROZEN)
+            if (CURRENT_STATUS_JOBTRACKER != STATUS.JOBTRACKER_FROZEN)
             {
                 Console.WriteLine("[D] Freezing job tracker...");
-                Monitor.Enter(jobtrackerMonitor);
-                PREVIOUS_STATUS = CURRENT_STATUS;
-                CURRENT_STATUS = STATUS.JOBTRACKER_FROZEN;
+                PREVIOUS_STATUS_JOBTRACKER = CURRENT_STATUS_JOBTRACKER;
+                CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_FROZEN;
             }
             else
             {
@@ -409,10 +420,10 @@ namespace Worker
         {
             lock (jobtrackerMonitor)
             {
-                if (CURRENT_STATUS == STATUS.JOBTRACKER_FROZEN)
+                if (CURRENT_STATUS_JOBTRACKER == STATUS.JOBTRACKER_FROZEN)
                 {
                     Console.WriteLine("[D] Unfreezing job tracker...");
-                    CURRENT_STATUS = PREVIOUS_STATUS;
+                    CURRENT_STATUS_JOBTRACKER = PREVIOUS_STATUS_JOBTRACKER;
                     Monitor.PulseAll(jobtrackerMonitor);
                 }
                 else
@@ -427,7 +438,7 @@ namespace Worker
         // For STATUS command of PuppetMaster
         public enum STATUS
         {
-            JOBTRACKER_WAITING, JOBTRACKER_WORKING, JOBTRACKER_FROZEN, WORKER_WAITING, WORKER_TRANSFERING_INPUT, WORKER_WORKING, WORKER_TRANSFERING_OUTPUT, WORKER_FROZEN, WORKER_SLOWED
+            JOBTRACKER_WAITING, JOBTRACKER_WORKING, JOBTRACKER_FROZEN, WORKER_WAITING, WORKER_TRANSFERING_INPUT, WORKER_WORKING, WORKER_TRANSFERING_OUTPUT, WORKER_FROZEN, WORKER_SLOWED, JOBTRACKER_DISABLED
         };
 
     }

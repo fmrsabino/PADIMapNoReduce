@@ -18,7 +18,8 @@ namespace Worker
         {
             this.url = jobTrackerUrl;
             this.jobTrackerUrl = jobTrackerUrl;
-            CURRENT_STATUS = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
+            CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
+            CURRENT_STATUS_WORKER= STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
             jobtrackerMonitor = new object();
             workerMonitor = new object();
             mapperMonitor = new object();
@@ -30,12 +31,12 @@ namespace Worker
            (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName)
         {
             handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
-            CURRENT_STATUS = STATUS.JOBTRACKER_WORKING; // For STATUS command of PuppetMaster
+            CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WORKING; // For STATUS command of PuppetMaster
             this.clientUrl = clientUrl;
 
             if (nSplits == 0)
             {
-                CURRENT_STATUS = STATUS.JOBTRACKER_WAITING;
+                CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING;
                 return;
             }
 
@@ -135,6 +136,7 @@ namespace Worker
                         (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i]);
                 try
                 {
+                    handleFreezeJobTracker();
                     worker.isAlive(workers, jobQueue.ToArray(), onGoingWork);
                 }
                 catch (System.Net.Sockets.SocketException)
@@ -172,6 +174,7 @@ namespace Worker
 
         public void notifySplitFinish(string workerUrl, LibPADIMapNoReduce.FileSplit fileSplit)
         {
+            handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
             Console.WriteLine("Worker {0} finished split {1}", workerUrl, fileSplit.splitId);
 
             PADIMapNoReduce.IWorker worker =
@@ -208,12 +211,12 @@ namespace Worker
                             (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
                         client.jobConcluded();
                         System.Console.WriteLine("////////////JOB CONCLUDED/////////////////");
-                        CURRENT_STATUS = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
+                        CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
                     }
                     catch (Exception e)
                     {
                         System.Console.WriteLine("EXCEPTION: " + e.Message);
-                        CURRENT_STATUS = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
+                        CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
                         return;
                     }
                 }
