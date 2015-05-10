@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Remoting;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Tcp;
 using System.Windows.Forms;
 
 namespace PuppetMaster
@@ -62,6 +65,11 @@ namespace PuppetMaster
 
             if (portNumber != 0 && workerExecutablePath != null && clientExecutablePath != null)
             {
+                TcpChannel receiveChannel = new TcpChannel(Convert.ToInt32(portNumber));
+                ChannelServices.RegisterChannel(receiveChannel, false);
+                PuppetMaster pm = new PuppetMaster(workerExecutablePath);
+                RemotingServices.Marshal(pm, "PM", typeof(PADIMapNoReduce.IPuppetMaster));
+
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 Application.Run(new PuppetMasterForm(portNumber, workerExecutablePath, clientExecutablePath));

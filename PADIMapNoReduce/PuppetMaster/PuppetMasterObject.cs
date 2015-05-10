@@ -15,6 +15,12 @@ namespace PuppetMaster
             workerExecutablePath = _workerExecutablePath;
         }
 
+        // So the object is never deregistered
+        public override object InitializeLifetimeService()
+        {
+            return null;
+        }
+
         public bool startWorker(int id, string serviceURL, string entryURL)
         {
             Uri serviceURLparsed;

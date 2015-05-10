@@ -34,41 +34,44 @@ namespace PuppetMaster
             clientExecutablePath = _clientExecutablePath;
 
             delegateMockStartWorker = new MockStartWorker(mockStartWorker);
-
-            TcpChannel receiveChannel = new TcpChannel(Convert.ToInt32(port));
-            ChannelServices.RegisterChannel(receiveChannel, false);
-
-            PuppetMaster pm = new PuppetMaster(workerExecutablePath);
-
-            RemotingServices.Marshal(pm, "PM");
-
         }
 
         private void executeCommand(string command) {
 
             // Regexes for commands
+            // WORKER <ID> <PUPPETMASTER-URL> <SERVICE-URL>:
+            Regex jobtracker = new Regex("^WORKER (\\d+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)$");
             // WORKER <ID> <PUPPETMASTER-URL> <SERVICE-URL> <ENTRY-URL>:
-            Regex worker = new Regex("^WORKER (\\d+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)");
+            Regex worker = new Regex("^WORKER (\\d+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+)$");
             // SUBMIT <ENTRY-URL> <FILE> <OUTPUT> <S> <MAP> <DLL>
-            Regex submit = new Regex("^SUBMIT (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) (\\d+) ([a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+)");
+            Regex submit = new Regex("^SUBMIT (tcp://[a-z,A-Z,0-9]+:\\d+/[a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+) (\\d+) ([a-z,A-Z,0-9_]+) ([\\\\/\\.:a-z,A-Z,0-9_]+)$");
             //WAIT <SECS>
-            Regex wait = new Regex("^WAIT (\\d+)");
+            Regex wait = new Regex("^WAIT (\\d+)$");
             //STATUS
-            Regex status = new Regex("^STATUS");
+            Regex status = new Regex("^STATUS$");
             //SLOWW <ID> <delay-in-seconds>
-            Regex sloww = new Regex("^SLOWW (\\d+) (\\d+)");
+            Regex sloww = new Regex("^SLOWW (\\d+) (\\d+)$");
             //FREEZEW <ID>
-            Regex freezew = new Regex("^FREEZEW (\\d+)");
+            Regex freezew = new Regex("^FREEZEW (\\d+)$");
             //UNFREEZEW <ID>
-            Regex unfreezew = new Regex("^UNFREEZEW (\\d+)");
+            Regex unfreezew = new Regex("^UNFREEZEW (\\d+)$");
             //FREEZEC <ID>
-            Regex freezec = new Regex("^FREEZEC (\\d+)");
+            Regex freezec = new Regex("^FREEZEC (\\d+)$");
             //UNFREEZEC <ID>
-            Regex unfreezec = new Regex("^UNFREEZEC (\\d+)");
+            Regex unfreezec = new Regex("^UNFREEZEC (\\d+)$");
             // Any commented out command
             Regex comment = new Regex("^%");
 
             MatchCollection matches;
+            
+            // WORKER Command for jobtracker
+            matches = jobtracker.Matches(command);
+            if (matches.Count > 0)
+            {
+                executeWORKERCommand(matches);
+                return;
+            }
+
             // WORKER Command
             matches = worker.Matches(command);
             if (matches.Count > 0)
@@ -159,7 +162,7 @@ namespace PuppetMaster
                 int workerId = int.Parse(matches[0].Groups[1].Value);
                 string PuppetMasterURL = matches[0].Groups[2].Value;
                 string ServiceURL = matches[0].Groups[3].Value;
-                string EntryURL = matches[0].Groups[4].Value;
+                string EntryURL = matches[0].Groups[4] != null ? matches[0].Groups[4].Value : "";
 
                 PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
                     typeof(PADIMapNoReduce.IPuppetMaster), PuppetMasterURL);
