@@ -105,7 +105,8 @@ namespace Worker
                     string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                     splitBytes.Clear();
 
-                    map(ref splitLines, fileSplits.splitId);
+                    long nulls = 0;
+                    map(ref splitLines, fileSplits.splitId, true);
                 }
                 else //request batch
                 {
@@ -130,8 +131,11 @@ namespace Worker
                         string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                         splitBytes.Clear();
 
-                        map(ref splitLines, fileSplits.splitId);
+                        map(ref splitLines, fileSplits.splitId, false);
+                        // We need something more coarse because we can't get the current size being processed due to different encodings
+                        PERCENTAGE_FINISHED = (float)(i-byteInterval.First)/(float)(byteInterval.Second - byteInterval.First);
                     }
+                    PERCENTAGE_FINISHED = 1;
                 }
 
             }
@@ -183,7 +187,7 @@ namespace Worker
             }
         }
 
-        private bool map(ref string[] lines, int splitId)
+        private bool map(ref string[] lines, int splitId, bool singleCall)
         {
             handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
             handleSlowMap(); // For handling SLOWW from PuppetMaster
@@ -192,8 +196,8 @@ namespace Worker
                     (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
             StringBuilder sb = new StringBuilder();
             List<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
+            int i = 0; // For PuppetMaster STATUS
             // Dynamically Invoke the method 
-            int i = 0; // For STATUS command of PuppetMaster
             for (int j = 0; j < lines.Length; j++)
             {
                 handleFreezeWorker(); // For handling FREEZEW from PuppetMaster
@@ -218,10 +222,11 @@ namespace Worker
                     sb.Clear();
                     result.Clear();
                 }
-
-                // For STATUS command of PuppetMaster
-                i++;
-                PERCENTAGE_FINISHED = i / lines.Length;
+                if (singleCall)
+                {
+                    i++; // For PuppetMaster STATUS
+                    PERCENTAGE_FINISHED = (float)i / (float)lines.Length;
+                }
             }
 
             if (result.Count != 0) //send the rest

@@ -4,7 +4,7 @@ SUBMIT 1 2 3 4 5 6
 WORKER 1 tcp://localhost:20001/PM tcp://localhost:30001/W
 WORKER 2 tcp://localhost:20001/PM tcp://localhost:30002/W tcp://localhost:30001/W
 SUBMIT tcp://localhost:30001/W ..\..\..\tests\test.in ..\..\..\tests\ 1 Mapper ..\..\..\LibMapper\bin\Debug\LibMapper.dll
-SUBMIT tcp://localhost:30001/W E:\pl2000.txt E:\ 1 Mapper ..\..\..\LibMapper\bin\Debug\LibMapper.dll
+SUBMIT tcp://localhost:30001/W E:\pl2000.txt E:\ 2 Mapper ..\..\..\LibMapper\bin\Debug\LibMapper.dll
 WAIT 10
 STATUS
 SLOWW 2 30
