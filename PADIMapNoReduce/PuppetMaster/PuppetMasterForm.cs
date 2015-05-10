@@ -34,14 +34,6 @@ namespace PuppetMaster
             clientExecutablePath = _clientExecutablePath;
 
             delegateMockStartWorker = new MockStartWorker(mockStartWorker);
-
-            TcpChannel receiveChannel = new TcpChannel(Convert.ToInt32(port));
-            ChannelServices.RegisterChannel(receiveChannel, false);
-
-            PuppetMaster pm = new PuppetMaster(workerExecutablePath);
-
-            RemotingServices.Marshal(pm, "PM");
-
         }
 
         private void executeCommand(string command) {
