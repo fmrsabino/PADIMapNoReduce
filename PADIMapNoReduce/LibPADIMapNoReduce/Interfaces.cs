@@ -19,6 +19,7 @@ namespace PADIMapNoReduce {
         void unfreezec();
         void checkWorkerStatus(Object state);
         void notifySplitFinish(string workerUrl,LibPADIMapNoReduce.FileSplit fileSplits);
+        void removeJobTracker(string jobTracker);
     }
 
     public interface IWorker : IJobTracker
@@ -29,7 +30,7 @@ namespace PADIMapNoReduce {
         void sloww(int seconds);
         void freezew();
         void unfreezew();
-        bool isAlive(List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork);
+        bool isAlive(List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork);
     }
 
     public interface IClient

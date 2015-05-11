@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
@@ -39,8 +40,14 @@ namespace Worker
                                 string jobTrackerUrl = args[2];
                                 Worker worker = new Worker(workerUrl, jobTrackerUrl);
 
+                                BinaryServerFormatterSinkProvider provider = new BinaryServerFormatterSinkProvider();
+                                IDictionary props = new Hashtable();
+                                props["timeout"] = 1000;
+                                props["port"] = portInputFormatted;
+
                                 //Publish Worker object
-                                channel = new TcpChannel(portInputFormatted);
+                                channel = new TcpChannel(props, null, provider);
+                               // channel = new TcpChannel(portInputFormatted);
                                 ChannelServices.RegisterChannel(channel, false);
 
                                 RemotingServices.Marshal(
@@ -77,8 +84,15 @@ namespace Worker
                                 string jobTrackerUrl = "tcp://" + System.Environment.MachineName  + ":" + portInputFormatted + "/" + Worker.WORKER_OBJECT_URI;
                                 Worker worker = new Worker(jobTrackerUrl);
 
-                                //Publish JobTrakcer object
-                                channel = new TcpChannel(portInputFormatted);
+                               // Publish JobTrakcer object
+                                BinaryServerFormatterSinkProvider provider = new BinaryServerFormatterSinkProvider();
+                                IDictionary props = new Hashtable();
+                                props["timeout"] = 1000;
+                                props["port"] = portInputFormatted;
+
+                                //Publish Worker object
+                                channel = new TcpChannel(props, null, provider);
+                                //channel = new TcpChannel(portInputFormatted);
                                 ChannelServices.RegisterChannel(channel, false);
                                 RemotingServices.Marshal(
                                         worker,
@@ -122,6 +136,13 @@ namespace Worker
 
                 //DONE: Check exceptions
                 //DONE: Check for port range
+               // BinaryServerFormatterSinkProvider provider = new BinaryServerFormatterSinkProvider();
+                //IDictionary props = new Hashtable();
+                //props["timeout"] = 1000;
+                //props["port"] = portInputFormatted;
+
+                //Publish Worker object
+                //channel = new TcpChannel(props, null, provider);
                 channel = new TcpChannel(portInputFormatted);
                 ChannelServices.RegisterChannel(channel, false);
                 

@@ -8,6 +8,7 @@ namespace Worker
     public partial class Worker : MarshalByRefObject, PADIMapNoReduce.IWorker
     {
         private List<string> workers = new List<string>();
+        private List<string> jobTrackers = new List<string>();
         private ConcurrentQueue<LibPADIMapNoReduce.FileSplit> jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>();
         private Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork = new Dictionary<string, LibPADIMapNoReduce.FileSplit>();
 
@@ -25,12 +26,14 @@ namespace Worker
             mapperMonitor = new object();
             timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
             workers.Add(url);
+            jobTrackers.Add(jobTrackerUrl);
         }
 
         public void registerJob
            (string inputFilePath, int nSplits, string outputResultPath, long nBytes, string clientUrl, byte[] mapperCode, string mapperClassName)
         {
             handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
+            //handleFreezeWorker();
             CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WORKING; // For STATUS command of PuppetMaster
             this.clientUrl = clientUrl;
 
@@ -94,9 +97,11 @@ namespace Worker
         public bool registerWorker(string workerUrl)
         {
             handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
+            //handleFreezeWorker();
             if (!workers.Contains(workerUrl))
             {
                 workers.Add(workerUrl);
+                jobTrackers.Add(workerUrl);
                 System.Console.WriteLine("Registered " + workerUrl);
 
                 //When a worker appears after a job has began
@@ -121,23 +126,21 @@ namespace Worker
             }
         }
 
+        public void removeJobTracker(string jobTrackerUrl) {
+            jobTrackers.Remove(jobTrackerUrl);
+        }
+
         public void checkWorkerStatus(Object state)
         {
+            handleFreezeJobTracker();
             List<string> deadWorkers = new List<string>();
             for (int i = 0; i < workers.Count; i++)
             {
-                //Do not send Alive to self
-                if (url == workers[i])
-                {
-                    continue;
-                }
-
                 PADIMapNoReduce.IWorker worker =
-                        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i]);
+                       (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i]);
                 try
-                {
-                    handleFreezeJobTracker();
-                    worker.isAlive(workers, jobQueue.ToArray(), onGoingWork);
+                {  
+                    worker.isAlive(jobTrackers, workers, jobQueue.ToArray(), onGoingWork);             
                 }
                 catch (System.Net.Sockets.SocketException)
                 {

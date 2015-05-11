@@ -28,7 +28,6 @@ namespace Worker
         private string filePath;
         private bool workerSetup = false;
 
-
         public static STATUS PREVIOUS_STATUS_WORKER;
         public static STATUS CURRENT_STATUS_WORKER;
         public static STATUS PREVIOUS_STATUS_JOBTRACKER;
@@ -110,7 +109,6 @@ namespace Worker
                     string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                     splitBytes.Clear();
 
-                    long nulls = 0;
                     map(ref splitLines, fileSplits.splitId, true);
                 }
                 else //request batch
@@ -127,18 +125,18 @@ namespace Worker
                             miniByteInterval = new PADIMapNoReduce.Pair<long, long>(i, i + BATCH_REQUEST_SIZE);
                         }
 
-                        lock(workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_TRANSFERING_INPUT;
+                        lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_TRANSFERING_INPUT;
 
                         List<byte> splitBytes = client.processBytes(miniByteInterval, filePath);
 
-                        lock(workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING;
+                        lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WORKING;
 
                         string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                         splitBytes.Clear();
 
                         map(ref splitLines, fileSplits.splitId, false);
                         // We need something more coarse because we can't get the current size being processed due to different encodings
-                        PERCENTAGE_FINISHED = (float)(i-byteInterval.First)/(float)(byteInterval.Second - byteInterval.First);
+                        PERCENTAGE_FINISHED = (float)(i - byteInterval.First) / (float)(byteInterval.Second - byteInterval.First);
                     }
                     PERCENTAGE_FINISHED = 1;
                 }
@@ -151,48 +149,58 @@ namespace Worker
             PERCENTAGE_FINISHED = 1; // For STATUS command of PuppetMaster
             lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
 
-
-            if (jobTrackerUrl != url)
+            //Notify JobTracker
+            PADIMapNoReduce.IJobTracker jobTracker =
+                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+            try
             {
-                //Notify JobTracker
-                PADIMapNoReduce.IJobTracker jobTracker =
-                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
-                try
+                jobTracker.notifySplitFinish(url, fileSplits);
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                Console.WriteLine("Couldn't contact to JobTracker! Searching for the new one...");
+                if (jobTrackers.Count > 1)
                 {
-                    bool succeded = false;
-                    Thread thrd1 = new Thread(() => { jobTracker.notifySplitFinish(url, fileSplits); succeded = true; });
-                    thrd1.Start();
-                    thrd1.Join(JOBTRACKER_COMM_TIMEOUT);
-                    if (!succeded) throw new System.Net.Sockets.SocketException(); // Simulate a network exception if notify takes too long
-                }
-                catch (System.Net.Sockets.SocketException)
-                {
-                    
-                    Console.WriteLine("Couldn't contact to JobTracker! Searching for the new one...");
-                    if (workers.Count > 0)
+                    if (jobTrackers[1] == url)
                     {
-                        if (workers[1] == url)
-                        {
-                            Console.WriteLine("I'm the new JobTracker");
-                            Console.Title = "JobTracker - " + url;
-                            jobTrackerUrl = url;
-                            timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
-                            notifySplitFinish(url, fileSplits);
-                        }
-                        else
-                        {
-                            Console.WriteLine("Contacting " + workers[1]);
-                            jobTrackerUrl = workers[1];
-                            PADIMapNoReduce.IJobTracker newJobTracker =
-                                (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), workers[1]);
-                            newJobTracker.notifySplitFinish(url, fileSplits);
-                        }
+                        Console.WriteLine("I'm the new JobTracker");
+                        Console.Title = "JobTracker - " + url;
+                        removeJobTracker(jobTrackerUrl);
+                        jobTrackerUrl = url;
+                        timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+                        notifySplitFinish(url, fileSplits);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Contacting " + jobTrackers[1]);
+                        PADIMapNoReduce.IJobTracker newJobTracker =
+                            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackers[1]);
+                        newJobTracker.removeJobTracker(jobTrackerUrl);
+                        jobTrackerUrl = jobTrackers[1];
+                        newJobTracker.notifySplitFinish(url, fileSplits);
                     }
                 }
-            }
-            else
-            {
-                notifySplitFinish(url, fileSplits);
+                else if (jobTrackers.Count == 1)
+                {
+                    if (jobTrackers[0] == url)
+                    {
+                        Console.WriteLine("I'm the new JobTracker");
+                        Console.Title = "JobTracker - " + url;
+                        removeJobTracker(jobTrackerUrl);
+                        jobTrackerUrl = url;
+                        timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+                        notifySplitFinish(url, fileSplits);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Contacting " + jobTrackers[1]);
+                        PADIMapNoReduce.IJobTracker newJobTracker =
+                            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackers[1]);
+                        newJobTracker.removeJobTracker(jobTrackerUrl);
+                        jobTrackerUrl = jobTrackers[1];
+                        newJobTracker.notifySplitFinish(url, fileSplits);
+                    }
+                }
             }
         }
 
@@ -252,8 +260,10 @@ namespace Worker
             return true;
         }
 
-        public bool isAlive(List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork)
+        public bool isAlive(List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork)
         {
+            handleFreezeWorker();
+            this.jobTrackers = jobTrackers;
             this.workers = workers;
             this.jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>(jobQueue);
             this.onGoingWork = onGoingWork;
@@ -393,6 +403,10 @@ namespace Worker
                 {
                     Console.WriteLine("[D] Unfreezing worker...");
                     CURRENT_STATUS_WORKER = PREVIOUS_STATUS_WORKER;
+                    //if (this.url == jobTrackerUrl) 
+                    //{
+                    //    Monitor.PulseAll(jobtrackerMonitor);
+                    //}
                     Monitor.PulseAll(workerMonitor);
                 }
                 else
@@ -424,7 +438,9 @@ namespace Worker
                 {
                     Console.WriteLine("[D] Unfreezing job tracker...");
                     CURRENT_STATUS_JOBTRACKER = PREVIOUS_STATUS_JOBTRACKER;
+                    // CURRENT_STATUS_WORKER = PREVIOUS_STATUS_WORKER;
                     Monitor.PulseAll(jobtrackerMonitor);
+                    //Monitor.PulseAll(workerMonitor);
                 }
                 else
                 {
