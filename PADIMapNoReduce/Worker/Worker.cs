@@ -403,17 +403,25 @@ namespace Worker
                 {
                     Console.WriteLine("[D] Unfreezing worker...");
                     CURRENT_STATUS_WORKER = PREVIOUS_STATUS_WORKER;
-                    //if (this.url == jobTrackerUrl) 
-                    //{
-                    //    Monitor.PulseAll(jobtrackerMonitor);
-                    //}
                     Monitor.PulseAll(workerMonitor);
+
+                    //PADIMapNoReduce.IJobTracker jobTracker =
+                    //(PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                    //jobTracker.updateLists(url);
                 }
                 else
                 {
                     Console.WriteLine("[D] Unfreeze called on worker, but it's already unfrozen...");
                 }
             }
+            //Console.WriteLine("chegas aqui????!");
+
+            //LibPADIMapNoReduce.FileSplit job = null;
+            //if (jobQueue.TryDequeue(out job))
+            //{
+            //    onGoingWork.Add(url, job);
+            //    work(job);
+            //}
         }
 
         public void freezec()
@@ -438,9 +446,7 @@ namespace Worker
                 {
                     Console.WriteLine("[D] Unfreezing job tracker...");
                     CURRENT_STATUS_JOBTRACKER = PREVIOUS_STATUS_JOBTRACKER;
-                    // CURRENT_STATUS_WORKER = PREVIOUS_STATUS_WORKER;
                     Monitor.PulseAll(jobtrackerMonitor);
-                    //Monitor.PulseAll(workerMonitor);
                 }
                 else
                 {

@@ -105,18 +105,18 @@ namespace Worker
                 System.Console.WriteLine("Registered " + workerUrl);
 
                 //When a worker appears after a job has began
-                if (workerSetup) {
-                    PADIMapNoReduce.IWorker worker =
-                        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl);
-                    worker.setup(mapperCode, mapperClass, clientUrl, filePath);
+                //if (workerSetup) {
+                //    PADIMapNoReduce.IWorker worker =
+                //        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl);
+                //    worker.setup(mapperCode, mapperClass, clientUrl, filePath);
 
-                    LibPADIMapNoReduce.FileSplit job = null;
-                    if (jobQueue.TryDequeue(out job))
-                    {
-                        onGoingWork.Add(workerUrl, job);
-                        worker.work(job);
-                    }    
-                }
+                //    LibPADIMapNoReduce.FileSplit job = null;
+                //    if (jobQueue.TryDequeue(out job))
+                //    {
+                //        onGoingWork.Add(workerUrl, job);
+                //        worker.work(job);
+                //    }    
+                //}
                 return true;
             }
             else
@@ -130,6 +130,12 @@ namespace Worker
             jobTrackers.Remove(jobTrackerUrl);
         }
 
+        public void updateLists(string workerUrl) 
+        {
+            //workers.Add(workerUrl);
+            //jobTrackers.Add(workerUrl);            
+        }
+
         public void checkWorkerStatus(Object state)
         {
             handleFreezeJobTracker();
@@ -140,7 +146,8 @@ namespace Worker
                        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i]);
                 try
                 {  
-                    worker.isAlive(jobTrackers, workers, jobQueue.ToArray(), onGoingWork);             
+                    worker.isAlive(jobTrackers, workers, jobQueue.ToArray(), onGoingWork);
+                    //System.Console.WriteLine("consegiu checkar o w " + workers[i]);
                 }
                 catch (System.Net.Sockets.SocketException)
                 {
