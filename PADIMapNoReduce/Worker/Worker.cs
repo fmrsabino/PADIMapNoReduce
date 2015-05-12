@@ -134,7 +134,9 @@ namespace Worker
                         string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                         splitBytes.Clear();
 
-                        map(ref splitLines, fileSplits.splitId, false);
+                        if(!map(ref splitLines, fileSplits.splitId, false))
+                            return;
+
                         // We need something more coarse because we can't get the current size being processed due to different encodings
                         PERCENTAGE_FINISHED = (float)(i - byteInterval.First) / (float)(byteInterval.Second - byteInterval.First);
                     }
@@ -252,11 +254,21 @@ namespace Worker
                 {
                     sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
                 }
-                client.receiveProcessData(sb.ToString(), splitId);
-                sb.Clear();
-                result.Clear();
-            }
 
+                PADIMapNoReduce.IJobTracker jobTracker =
+                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+
+                if (!jobTracker.canSendProcessedData)
+                {
+                    return false;
+                }
+                else
+                {
+                    client.receiveProcessData(sb.ToString(), splitId);
+                    sb.Clear();
+                    result.Clear();
+                }
+            }
             return true;
         }
 
@@ -266,6 +278,7 @@ namespace Worker
             this.jobTrackers = jobTrackers;
             this.workers = workers;
             this.jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>(jobQueue);
+         //ACTUALIZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAR zombies
             this.onGoingWork = onGoingWork;
             return true;
         }

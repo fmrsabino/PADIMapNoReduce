@@ -20,7 +20,9 @@ namespace PADIMapNoReduce {
         void checkWorkerStatus(Object state);
         void notifySplitFinish(string workerUrl,LibPADIMapNoReduce.FileSplit fileSplits);
         void removeJobTracker(string jobTracker);
-        void updateLists(string workerUrl);
+        void updateWorkers(string workerUrl);
+        void updateJobTrackers(string workerUrl);
+        bool canSendProcessedData();
     }
 
     public interface IWorker : IJobTracker
