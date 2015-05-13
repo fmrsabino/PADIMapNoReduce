@@ -35,6 +35,7 @@ namespace PADIMapNoReduce {
         void freezew();
         void unfreezew();
         bool isAlive(ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue, List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork);
+        bool imAlive();
     }
 
     public interface IClient

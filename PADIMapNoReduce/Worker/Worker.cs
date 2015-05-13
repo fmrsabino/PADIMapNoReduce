@@ -279,10 +279,15 @@ namespace Worker
             this.workers = workers;
             this.jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>(jobQueue);
             this.zombieQueue = new ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit>(zombieQueue);
-         //ACTUALIZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAR zombies
             this.onGoingWork = onGoingWork;
             return true;
         }
+
+
+        //TEM DE SER REMOTO!
+        public bool imAlive() { return true; }
+
+
 
         public void printStatus()
         {
