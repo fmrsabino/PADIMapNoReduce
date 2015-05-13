@@ -272,9 +272,13 @@ namespace Worker
             return true;
         }
 
-        public bool isAlive(ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue, List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork)
+        public bool isAlive(ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue, List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork)
         {
             handleFreezeWorker();
+            if (url == jobTrackerUrl) 
+            {
+                return true;
+            }
             this.jobTrackers = jobTrackers;
             this.workers = workers;
             this.jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>(jobQueue);
@@ -282,11 +286,6 @@ namespace Worker
             this.onGoingWork = onGoingWork;
             return true;
         }
-
-
-        //TEM DE SER REMOTO!
-        public bool imAlive() { return true; }
-
 
 
         public void printStatus()
@@ -423,7 +422,6 @@ namespace Worker
                     Console.WriteLine("[D] Unfreezing worker...");
                     CURRENT_STATUS_WORKER = PREVIOUS_STATUS_WORKER;
                     Monitor.PulseAll(workerMonitor);
-
                 }
                 else
                 {
@@ -435,13 +433,6 @@ namespace Worker
             PADIMapNoReduce.IJobTracker jobTracker =
             (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
             jobTracker.updateWorkers(url);
-
-            //LibPADIMapNoReduce.FileSplit job = null;
-            //if (jobQueue.TryDequeue(out job))
-            //{
-            //    onGoingWork.Add(url, job);
-            //    work(job);
-            //}
         }
 
         public void freezec()
