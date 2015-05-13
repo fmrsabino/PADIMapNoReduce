@@ -10,7 +10,7 @@ namespace Worker
         private List<string> workers = new List<string>();
         private List<string> jobTrackers = new List<string>();
         private ConcurrentQueue<LibPADIMapNoReduce.FileSplit> jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>();
-        private ConcurrentQueue<LibPADIMapNoReduce.FileSplit> zombieQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>();
+        private ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue = new ConcurrentDictionary<int,LibPADIMapNoReduce.FileSplit>();
         private Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork = new Dictionary<string, LibPADIMapNoReduce.FileSplit>();
 
         private Timer timer;
@@ -143,12 +143,21 @@ namespace Worker
             jobTrackers.Add(workerUrl);
         }
 
-        public bool canSendProcessedData() 
+        public bool canSendProcessedData(string workerUrl, int splitId) 
         {
-
-
-            return false;
-
+            LibPADIMapNoReduce.FileSplit jobActual;
+            onGoingWork.TryGetValue(workerUrl, out jobActual);
+            if (splitId == jobActual.splitId)
+            {
+                LibPADIMapNoReduce.FileSplit job1;
+                zombieQueue.TryRemove(splitId, out job1);
+                return true;
+            }
+            else 
+            {
+                Console.WriteLine("outro worker está a trabalhar no split que eu quero");
+                return false;          
+            }
         }
 
         public void checkWorkerStatus(Object state)
@@ -161,7 +170,7 @@ namespace Worker
                        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i]);
                 try
                 {
-                    worker.isAlive(jobTrackers, workers, jobQueue.ToArray(), onGoingWork);
+                    worker.isAlive(zombieQueue, jobTrackers, workers, jobQueue.ToArray(), onGoingWork);
                     //System.Console.WriteLine("consegiu checkar o w " + workers[i]);
                 }
                 catch (System.Net.Sockets.SocketException)
@@ -169,8 +178,9 @@ namespace Worker
                     Console.WriteLine("Couldn't reach {0}. Marking as dead!", workers[i]);
                     deadWorkers.Add(workers[i]);
 
-                    LibPADIMapNoReduce.FileSplit split;
-                    if (onGoingWork.TryGetValue(workers[i], out split))
+                    LibPADIMapNoReduce.FileSplit splitNz;
+                    LibPADIMapNoReduce.FileSplit splitZ;
+                    if (onGoingWork.TryGetValue(workers[i], out splitNz))
                     {
                         // This means that the worker was working on the split
                         //PADIMapNoReduce.IClient client =
@@ -178,7 +188,11 @@ namespace Worker
                         // client.removeFile(split.splitId);
                         //jobQueue.Enqueue(split); 
                         //onGoingWork.Remove(workers[i]); 
-                        zombieQueue.Enqueue(split);
+                        zombieQueue.TryAdd(splitNz.splitId, splitNz);
+                    }
+                    else if (onGoingWork.TryGetValue(workers[i], out splitZ))
+                    {
+                        onGoingWork.TryGetValue(workers[i], out splitZ);
                     }
                 }
             }
@@ -232,7 +246,10 @@ namespace Worker
             else
             {
                 LibPADIMapNoReduce.FileSplit jobz = null;
-                if (zombieQueue.TryDequeue(out jobz))
+                IEnumerator<int> it = (IEnumerator<int>) zombieQueue.Keys.GetEnumerator();
+                bool hasFirst = it.MoveNext();
+
+                if (hasFirst && zombieQueue.TryRemove(it.Current, out jobz))
                 {
                     client.removeFile(fileSplit.splitId);
                     try

@@ -258,7 +258,7 @@ namespace Worker
                 PADIMapNoReduce.IJobTracker jobTracker =
                     (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
 
-                if (!jobTracker.canSendProcessedData)
+                if (!jobTracker.canSendProcessedData(url, splitId))
                 {
                     return false;
                 }
@@ -272,12 +272,13 @@ namespace Worker
             return true;
         }
 
-        public bool isAlive(List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork)
+        public bool isAlive(ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue, List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork)
         {
             handleFreezeWorker();
             this.jobTrackers = jobTrackers;
             this.workers = workers;
             this.jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>(jobQueue);
+            this.zombieQueue = new ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit>(zombieQueue);
          //ACTUALIZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAR zombies
             this.onGoingWork = onGoingWork;
             return true;
@@ -418,9 +419,6 @@ namespace Worker
                     CURRENT_STATUS_WORKER = PREVIOUS_STATUS_WORKER;
                     Monitor.PulseAll(workerMonitor);
 
-                    //PADIMapNoReduce.IJobTracker jobTracker =
-                    //(PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
-                    //jobTracker.updateLists(url);
                 }
                 else
                 {
@@ -428,6 +426,10 @@ namespace Worker
                 }
             }
             //Console.WriteLine("chegas aqui????!");
+
+            PADIMapNoReduce.IJobTracker jobTracker =
+            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+            jobTracker.updateWorkers(url);
 
             //LibPADIMapNoReduce.FileSplit job = null;
             //if (jobQueue.TryDequeue(out job))
