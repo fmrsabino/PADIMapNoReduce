@@ -169,6 +169,7 @@ namespace Worker
                 }
                 else
                 {
+                    Console.WriteLine("o que split que " + workerUrl + " quer trabalhar é o " + splitId + ". O que está no registo é " + jobActual.splitId);
                     Console.WriteLine("nao é suposto estar aqui. só para debugging");
                     return false;
                 }
@@ -182,6 +183,7 @@ namespace Worker
 
         public void checkJTStatus(Object state)
         {
+            handleFreezeWorker();
             handleFreezeJobTracker();
             if (jobTrackerUrl != url)
             {
@@ -190,20 +192,23 @@ namespace Worker
                 try
                 {
                     jobTracker.jtIsAlive();
-                    System.Console.WriteLine("PING do JT " + url + " para o JT " + jobTrackerUrl);
-
+                    //System.Console.WriteLine("PING do JT " + url + " para o JT " + jobTrackerUrl);
                 }
                 catch (System.Net.Sockets.SocketException)
                 {
                     jobTrackers.Remove(jobTrackerUrl);
-                    if (jobTrackers[0] == url) 
+                    if (jobTrackers[0] == url)
                     {
+                        Console.WriteLine("I'm the new JobTracker");
                         Console.Title = "JobTracker - " + url;
+                        jobTrackerUrl = url;
                         timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
-                        //timerJT = new Timer(checkJTStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
                     }
-                    jobTrackerUrl = jobTrackers[0];
-                    System.Console.WriteLine("NOW THE JOBTRACKER IS " + jobTrackerUrl);
+                    else
+                    {
+                        jobTrackerUrl = jobTrackers[0];
+                        System.Console.WriteLine("The new JobTracker is " + jobTrackerUrl);
+                    }
                 }
             }
             timerJT.Change(ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
@@ -222,6 +227,7 @@ namespace Worker
                 try
                 {
                     worker.isAlive(zombieQueue, jobTrackers, workers, jobQueue.ToArray(), onGoingWork,jobTrackerUrl);
+                    //System.Console.WriteLine("PING do JT " + jobTrackerUrl + " para o worker " + workers[i]);
                 }
                 catch (System.Net.Sockets.SocketException)
                 {

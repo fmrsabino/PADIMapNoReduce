@@ -151,58 +151,22 @@ namespace Worker
             PERCENTAGE_FINISHED = 1; // For STATUS command of PuppetMaster
             lock (workerMonitor) CURRENT_STATUS_WORKER = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
 
-            //Notify JobTracker
-            PADIMapNoReduce.IJobTracker jobTracker =
-                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
-            try
+            //In case, at the call to the jobtracker he is down, the worker stay on the while until the variable jobTracker be actualized 
+            bool success = false;
+            while (!success)
             {
-                jobTracker.notifySplitFinish(url, fileSplits);
-            }
-            catch (System.Net.Sockets.SocketException)
-            {
-                Console.WriteLine("Couldn't contact to JobTracker! Searching for the new one...");
-                //if (jobTrackers.Count > 1)
-                //{
-                //    if (jobTrackers[1] == url)
-                //    {
-                //        Console.WriteLine("I'm the new JobTracker");
-                //        Console.Title = "JobTracker - " + url;
-                //        removeJobTracker(jobTrackerUrl);
-                //        jobTrackerUrl = url;
-                //        timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
-                //        notifySplitFinish(url, fileSplits);
-                //    }
-                //    else
-                //    {
-                //        Console.WriteLine("Contacting " + jobTrackers[1]);
-                //        PADIMapNoReduce.IJobTracker newJobTracker =
-                //            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackers[1]);
-                //        newJobTracker.removeJobTracker(jobTrackerUrl);
-                //        jobTrackerUrl = jobTrackers[1];
-                //        newJobTracker.notifySplitFinish(url, fileSplits);
-                //    }
-                //}
-                //else if (jobTrackers.Count == 1)
-                //{
-                //    if (jobTrackers[0] == url)
-                //    {
-                //        Console.WriteLine("I'm the new JobTracker");
-                //        Console.Title = "JobTracker - " + url;
-                //        removeJobTracker(jobTrackerUrl);
-                //        jobTrackerUrl = url;
-                //        timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
-                //        notifySplitFinish(url, fileSplits);
-                //    }
-                //    else
-                //    {
-                //        Console.WriteLine("Contacting " + jobTrackers[1]);
-                //        PADIMapNoReduce.IJobTracker newJobTracker =
-                //            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackers[1]);
-                //        newJobTracker.removeJobTracker(jobTrackerUrl);
-                //        jobTrackerUrl = jobTrackers[1];
-                //        newJobTracker.notifySplitFinish(url, fileSplits);
-                //    }
-                //}
+                //Notify JobTracker
+                PADIMapNoReduce.IJobTracker jobTracker =
+                        (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                try
+                {
+                    jobTracker.notifySplitFinish(url, fileSplits);
+                    success = true;
+                }
+                catch (System.Net.Sockets.SocketException)
+                {
+                    Console.WriteLine("In WORK func - Couldn't contact to JobTracker! Waiting for the new one...");
+                }
             }
         }
 
@@ -238,14 +202,17 @@ namespace Worker
                         sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
                     }
 
+                    //In case, at the call to the jobtracker he is down, the worker stay on the while until the variable jobTracker be actualized
                     bool success = false;
-                    while(!success){
+                    while (!success)
+                    {
                         PADIMapNoReduce.IJobTracker jobTracker =
                             (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
                         try
                         {
                             if (!jobTracker.canSendProcessedData(url, splitId))
                             {
+                                success = true;
                                 return false;
                             }
                             else
@@ -253,16 +220,15 @@ namespace Worker
                                 client.receiveProcessData(sb.ToString(), splitId);
                                 sb.Clear();
                                 result.Clear();
+                                success = true;
                             }
-                            System.Console.WriteLine(" sai do map! ligando m ao " + jobTrackerUrl);
-                            success = true;
                         }
-                        catch (System.Net.Sockets.SocketException) 
+                        catch (System.Net.Sockets.SocketException)
                         {
-                            System.Console.WriteLine("nao m consegui ligar ao JT -map " + jobTrackerUrl);
+                            System.Console.WriteLine("In MAP func - Couldn't contact to JobTracker! Waiting for the new one...");
                         }
                     }
-                
+
                 }
                 if (singleCall)
                 {
@@ -278,18 +244,31 @@ namespace Worker
                     sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
                 }
 
-                PADIMapNoReduce.IJobTracker jobTracker =
-                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
-
-                if (!jobTracker.canSendProcessedData(url, splitId))
+                //In case, at the call to the jobtracker he is down, the worker stay on the while until the variable jobTracker be actualized
+                bool success = false;
+                while (!success)
                 {
-                    return false;
-                }
-                else
-                {
-                    client.receiveProcessData(sb.ToString(), splitId);
-                    sb.Clear();
-                    result.Clear();
+                    PADIMapNoReduce.IJobTracker jobTracker =
+                            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                    try
+                    {
+                        if (!jobTracker.canSendProcessedData(url, splitId))
+                        {
+                            success = true;
+                            return false;
+                        }
+                        else
+                        {
+                            client.receiveProcessData(sb.ToString(), splitId);
+                            sb.Clear();
+                            result.Clear();
+                            success = true;
+                        }
+                    }
+                    catch (System.Net.Sockets.SocketException)
+                    {
+                        Console.WriteLine("In MAP func - Couldn't contact to JobTracker! Waiting for the new one...");
+                    }
                 }
             }
             return true;
@@ -356,6 +335,7 @@ namespace Worker
                 if (CURRENT_STATUS_JOBTRACKER == STATUS.JOBTRACKER_FROZEN)
                 {
                     Console.WriteLine("[D] Job tracker frozen. Locking...");
+                    Console.Title = "Worker - " + url;
                     timerW.Change(Timeout.Infinite, Timeout.Infinite);
                     Monitor.Wait(jobtrackerMonitor);
                 }
@@ -454,9 +434,22 @@ namespace Worker
                 }
             }
 
-            PADIMapNoReduce.IJobTracker jobTracker =
-            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
-            jobTracker.updateWorkers(url);
+            //In case, at the call to the jobtracker he is down, the worker stay on the while until the variable jobTracker be actualized
+            bool success = false;
+            while (!success)
+            {
+                PADIMapNoReduce.IJobTracker jobTracker =
+                (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                try
+                {
+                    jobTracker.updateWorkers(url);
+                    success = true;
+                }
+                catch (System.Net.Sockets.SocketException)
+                {
+                    Console.WriteLine("In UNFREEZEW func - Couldn't contact to JobTracker! Waiting for the new one...");
+                }
+            }
         }
 
         public void freezec()
@@ -482,13 +475,30 @@ namespace Worker
                     Console.WriteLine("[D] Unfreezing job tracker...");
                     CURRENT_STATUS_JOBTRACKER = PREVIOUS_STATUS_JOBTRACKER;
                     Monitor.PulseAll(jobtrackerMonitor);
+                    timerJT = new Timer(checkJTStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
                 }
                 else
                 {
                     Console.WriteLine("[D] Unfreeze called on job tracker, but it's already unfrozen...");
                 }
-            }
 
+                //In case, at the call to the jobtracker he is down, the worker stay on the while until the variable jobTracker be actualized
+                bool success = false;
+                while (!success)
+                {
+                    PADIMapNoReduce.IJobTracker jobTracker =
+                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                    try
+                    {
+                        jobTracker.updateJobTrackers(url);
+                        success = true;
+                    }
+                    catch (System.Net.Sockets.SocketException)
+                    {
+                        Console.WriteLine("In UNFREEZEC func - Couldn't contact to JobTracker! Waiting for the new one...");
+                    }
+                }
+            }
         }
 
 
