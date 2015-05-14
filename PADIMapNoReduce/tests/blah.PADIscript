@@ -3,5 +3,8 @@ WORKER 2 tcp://localhost:20001/PM tcp://localhost:30002/W tcp://localhost:30001/
 WORKER 3 tcp://localhost:20001/PM tcp://localhost:30003/W tcp://localhost:30001/W
 SUBMIT tcp://localhost:30001/W C:\temp\pl2000.txt C:\temp\ 6 Mapper ..\..\..\LibMapper\bin\Debug\LibMapper.dll
 FREEZEC 1
+UNFREEZEC 1
 FREEZEW 2
+UNFREEZEW 1
 STATUS
+FREEZEW 2

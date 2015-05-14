@@ -13,7 +13,8 @@ namespace Worker
         private ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue = new ConcurrentDictionary<int,LibPADIMapNoReduce.FileSplit>();
         private ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork = new ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit>();
 
-        private Timer timer;
+        private Timer timerW;
+        private Timer timerJT;
         private const long ALIVE_TIME_INTERVAL_IN_MS = 1000;
 
         public Worker(string jobTrackerUrl)
@@ -25,7 +26,7 @@ namespace Worker
             jobtrackerMonitor = new object();
             workerMonitor = new object();
             mapperMonitor = new object();
-            timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+            timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
             workers.Add(url);
             jobTrackers.Add(jobTrackerUrl);
         }
@@ -130,21 +131,33 @@ namespace Worker
 
         public void removeJobTracker(string jobTrackerUrl)
         {
+            handleFreezeJobTracker();
             jobTrackers.Remove(jobTrackerUrl);
         }
 
+        //called on UnfreezeW
         public void updateWorkers(string workerUrl)
         {
+            handleFreezeJobTracker();
             workers.Add(workerUrl);
         }
 
+        //called on UnfreezeC
         public void updateJobTrackers(string workerUrl)
         {
+            handleFreezeJobTracker();
             jobTrackers.Add(workerUrl);
+        }
+
+        public bool jtIsAlive()
+        {
+            handleFreezeJobTracker();
+            return true;
         }
 
         public bool canSendProcessedData(string workerUrl, int splitId)
         {
+            handleFreezeJobTracker();
             LibPADIMapNoReduce.FileSplit jobActual;
             if (onGoingWork.TryGetValue(workerUrl, out jobActual))
             {
@@ -156,16 +169,46 @@ namespace Worker
                 }
                 else
                 {
-                    Console.WriteLine("outro worker está a trabalhar no split que eu quero");
+                    Console.WriteLine("nao é suposto estar aqui. só para debugging");
                     return false;
                 }
             }
             else
             {
-                Console.WriteLine("Está estive freeze mas já alguém pegou no meu trabalho");
+                Console.WriteLine("Someone take my job during my timeout");
                 return false;
             }
         }
+
+        public void checkJTStatus(Object state)
+        {
+            handleFreezeJobTracker();
+            if (jobTrackerUrl != url)
+            {
+                PADIMapNoReduce.IJobTracker jobTracker =
+                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                try
+                {
+                    jobTracker.jtIsAlive();
+                    System.Console.WriteLine("PING do JT " + url + " para o JT " + jobTrackerUrl);
+
+                }
+                catch (System.Net.Sockets.SocketException)
+                {
+                    jobTrackers.Remove(jobTrackerUrl);
+                    if (jobTrackers[0] == url) 
+                    {
+                        Console.Title = "JobTracker - " + url;
+                        timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+                        //timerJT = new Timer(checkJTStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+                    }
+                    jobTrackerUrl = jobTrackers[0];
+                    System.Console.WriteLine("NOW THE JOBTRACKER IS " + jobTrackerUrl);
+                }
+            }
+            timerJT.Change(ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+        }
+
 
         public void checkWorkerStatus(Object state)
         {
@@ -178,7 +221,7 @@ namespace Worker
 
                 try
                 {
-                    worker.isAlive(zombieQueue, jobTrackers, workers, jobQueue.ToArray(), onGoingWork);
+                    worker.isAlive(zombieQueue, jobTrackers, workers, jobQueue.ToArray(), onGoingWork,jobTrackerUrl);
                 }
                 catch (System.Net.Sockets.SocketException)
                 {
@@ -206,7 +249,7 @@ namespace Worker
                 }
             }
 
-            timer.Change(ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+            timerW.Change(ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
         }
 
   
@@ -252,7 +295,7 @@ namespace Worker
                     client.removeFile(fileSplit.splitId);
                     try
                     {
-                        //Remove o zombieWorker do onGoingWork 
+                        //Removes the zombie worker from ongoingWork
                         foreach (string s in onGoingWork.Keys)
                         {
                             LibPADIMapNoReduce.FileSplit job1 = null;

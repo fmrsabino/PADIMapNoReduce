@@ -55,6 +55,7 @@ namespace Worker
             workerMonitor = new object();
             mapperMonitor = new object();
             jobtrackerMonitor = new object();
+            timerJT = new Timer(checkJTStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
         }
 
         public void setup(byte[] code, string className, string clientUrl, string filePath)
@@ -80,7 +81,6 @@ namespace Worker
                     }
                 }
             }
-
             workerSetup = true;
         }
 
@@ -134,7 +134,7 @@ namespace Worker
                         string[] splitLines = System.Text.Encoding.UTF8.GetString(splitBytes.ToArray()).Split(new string[] { Environment.NewLine }, System.StringSplitOptions.RemoveEmptyEntries);
                         splitBytes.Clear();
 
-                        if(!map(ref splitLines, fileSplits.splitId, false))
+                        if (!map(ref splitLines, fileSplits.splitId, false))
                             return;
 
                         // We need something more coarse because we can't get the current size being processed due to different encodings
@@ -161,48 +161,48 @@ namespace Worker
             catch (System.Net.Sockets.SocketException)
             {
                 Console.WriteLine("Couldn't contact to JobTracker! Searching for the new one...");
-                if (jobTrackers.Count > 1)
-                {
-                    if (jobTrackers[1] == url)
-                    {
-                        Console.WriteLine("I'm the new JobTracker");
-                        Console.Title = "JobTracker - " + url;
-                        removeJobTracker(jobTrackerUrl);
-                        jobTrackerUrl = url;
-                        timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
-                        notifySplitFinish(url, fileSplits);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Contacting " + jobTrackers[1]);
-                        PADIMapNoReduce.IJobTracker newJobTracker =
-                            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackers[1]);
-                        newJobTracker.removeJobTracker(jobTrackerUrl);
-                        jobTrackerUrl = jobTrackers[1];
-                        newJobTracker.notifySplitFinish(url, fileSplits);
-                    }
-                }
-                else if (jobTrackers.Count == 1)
-                {
-                    if (jobTrackers[0] == url)
-                    {
-                        Console.WriteLine("I'm the new JobTracker");
-                        Console.Title = "JobTracker - " + url;
-                        removeJobTracker(jobTrackerUrl);
-                        jobTrackerUrl = url;
-                        timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
-                        notifySplitFinish(url, fileSplits);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Contacting " + jobTrackers[1]);
-                        PADIMapNoReduce.IJobTracker newJobTracker =
-                            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackers[1]);
-                        newJobTracker.removeJobTracker(jobTrackerUrl);
-                        jobTrackerUrl = jobTrackers[1];
-                        newJobTracker.notifySplitFinish(url, fileSplits);
-                    }
-                }
+                //if (jobTrackers.Count > 1)
+                //{
+                //    if (jobTrackers[1] == url)
+                //    {
+                //        Console.WriteLine("I'm the new JobTracker");
+                //        Console.Title = "JobTracker - " + url;
+                //        removeJobTracker(jobTrackerUrl);
+                //        jobTrackerUrl = url;
+                //        timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+                //        notifySplitFinish(url, fileSplits);
+                //    }
+                //    else
+                //    {
+                //        Console.WriteLine("Contacting " + jobTrackers[1]);
+                //        PADIMapNoReduce.IJobTracker newJobTracker =
+                //            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackers[1]);
+                //        newJobTracker.removeJobTracker(jobTrackerUrl);
+                //        jobTrackerUrl = jobTrackers[1];
+                //        newJobTracker.notifySplitFinish(url, fileSplits);
+                //    }
+                //}
+                //else if (jobTrackers.Count == 1)
+                //{
+                //    if (jobTrackers[0] == url)
+                //    {
+                //        Console.WriteLine("I'm the new JobTracker");
+                //        Console.Title = "JobTracker - " + url;
+                //        removeJobTracker(jobTrackerUrl);
+                //        jobTrackerUrl = url;
+                //        timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+                //        notifySplitFinish(url, fileSplits);
+                //    }
+                //    else
+                //    {
+                //        Console.WriteLine("Contacting " + jobTrackers[1]);
+                //        PADIMapNoReduce.IJobTracker newJobTracker =
+                //            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackers[1]);
+                //        newJobTracker.removeJobTracker(jobTrackerUrl);
+                //        jobTrackerUrl = jobTrackers[1];
+                //        newJobTracker.notifySplitFinish(url, fileSplits);
+                //    }
+                //}
             }
         }
 
@@ -237,9 +237,32 @@ namespace Worker
                     {
                         sb.AppendLine("key: " + p.Key + ", value: " + p.Value);
                     }
-                    client.receiveProcessData(sb.ToString(), splitId);
-                    sb.Clear();
-                    result.Clear();
+
+                    bool success = false;
+                    while(!success){
+                        PADIMapNoReduce.IJobTracker jobTracker =
+                            (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                        try
+                        {
+                            if (!jobTracker.canSendProcessedData(url, splitId))
+                            {
+                                return false;
+                            }
+                            else
+                            {
+                                client.receiveProcessData(sb.ToString(), splitId);
+                                sb.Clear();
+                                result.Clear();
+                            }
+                            System.Console.WriteLine(" sai do map! ligando m ao " + jobTrackerUrl);
+                            success = true;
+                        }
+                        catch (System.Net.Sockets.SocketException) 
+                        {
+                            System.Console.WriteLine("nao m consegui ligar ao JT -map " + jobTrackerUrl);
+                        }
+                    }
+                
                 }
                 if (singleCall)
                 {
@@ -272,13 +295,14 @@ namespace Worker
             return true;
         }
 
-        public bool isAlive(ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue, List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork)
+        public bool isAlive(ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue, List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork, string jobTrackerUrl)
         {
             handleFreezeWorker();
-            if (url == jobTrackerUrl) 
+            if (url == jobTrackerUrl)
             {
                 return true;
             }
+            this.jobTrackerUrl = jobTrackerUrl;
             this.jobTrackers = jobTrackers;
             this.workers = workers;
             this.jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>(jobQueue);
@@ -332,6 +356,7 @@ namespace Worker
                 if (CURRENT_STATUS_JOBTRACKER == STATUS.JOBTRACKER_FROZEN)
                 {
                     Console.WriteLine("[D] Job tracker frozen. Locking...");
+                    timerW.Change(Timeout.Infinite, Timeout.Infinite);
                     Monitor.Wait(jobtrackerMonitor);
                 }
             }
@@ -428,7 +453,6 @@ namespace Worker
                     Console.WriteLine("[D] Unfreeze called on worker, but it's already unfrozen...");
                 }
             }
-            //Console.WriteLine("chegas aqui????!");
 
             PADIMapNoReduce.IJobTracker jobTracker =
             (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);

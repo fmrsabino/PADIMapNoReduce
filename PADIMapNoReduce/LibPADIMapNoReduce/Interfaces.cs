@@ -24,6 +24,7 @@ namespace PADIMapNoReduce {
         void updateWorkers(string workerUrl);
         void updateJobTrackers(string workerUrl);
         bool canSendProcessedData(string workerUrl, int splitId);
+        bool jtIsAlive();
     }
 
     public interface IWorker : IJobTracker
@@ -34,7 +35,8 @@ namespace PADIMapNoReduce {
         void sloww(int seconds);
         void freezew();
         void unfreezew();
-        bool isAlive(ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue, List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork);
+        bool isAlive(ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue, List<string> jobTrackers, 
+            List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork, string jobTrackerUrl);
     }
 
     public interface IClient
