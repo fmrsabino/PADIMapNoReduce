@@ -1,0 +1,10 @@
+WORKER 1 tcp://localhost:20001/PM tcp://localhost:30001/W
+WORKER 2 tcp://localhost:20001/PM tcp://localhost:30002/W tcp://localhost:30001/W
+WORKER 3 tcp://localhost:20001/PM tcp://localhost:30003/W tcp://localhost:30001/W
+WAIT 6
+SUBMIT tcp://localhost:30001/W C:\temp\pl2000.txt C:\temp\ 4 Mapper ..\..\..\LibMapper\bin\Debug\LibMapper.dll
+WAIT 4
+FREEZEW 2
+WAIT 30
+STATUS
+UNFREEZEW 2

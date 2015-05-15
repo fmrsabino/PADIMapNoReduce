@@ -23,6 +23,7 @@ namespace Worker
             this.jobTrackerUrl = jobTrackerUrl;
             CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
             CURRENT_STATUS_WORKER = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
+            LOCK_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
             jobtrackerMonitor = new object();
             workerMonitor = new object();
             mapperMonitor = new object();
@@ -129,12 +130,6 @@ namespace Worker
             }
         }
 
-        public void removeJobTracker(string jobTrackerUrl)
-        {
-            handleFreezeJobTracker();
-            jobTrackers.Remove(jobTrackerUrl);
-        }
-
         //called on UnfreezeW
         public void updateWorkers(string workerUrl)
         {
@@ -169,8 +164,8 @@ namespace Worker
                 }
                 else
                 {
-                    Console.WriteLine("o que split que " + workerUrl + " quer trabalhar é o " + splitId + ". O que está no registo é " + jobActual.splitId);
-                    Console.WriteLine("nao é suposto estar aqui. só para debugging");
+                    //Console.WriteLine("o que split que " + workerUrl + " quer trabalhar é o " + splitId + ". O que está no registo é " + jobActual.splitId);
+                    //Console.WriteLine("nao é suposto estar aqui. só para debugging");
                     return false;
                 }
             }
@@ -203,6 +198,12 @@ namespace Worker
                         Console.Title = "JobTracker - " + url;
                         jobTrackerUrl = url;
                         timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+                        if (onGoingWork.Count == 0)
+                        {
+                            CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING;
+
+                        }
+                        else { CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WORKING; }
                     }
                     else
                     {
@@ -227,7 +228,6 @@ namespace Worker
                 try
                 {
                     worker.isAlive(zombieQueue, jobTrackers, workers, jobQueue.ToArray(), onGoingWork,jobTrackerUrl);
-                    //System.Console.WriteLine("PING do JT " + jobTrackerUrl + " para o worker " + workers[i]);
                 }
                 catch (System.Net.Sockets.SocketException)
                 {

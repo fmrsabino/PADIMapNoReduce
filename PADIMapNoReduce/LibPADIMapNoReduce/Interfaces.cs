@@ -20,9 +20,8 @@ namespace PADIMapNoReduce {
         void unfreezec();
         void checkWorkerStatus(Object state);
         void notifySplitFinish(string workerUrl,LibPADIMapNoReduce.FileSplit fileSplits);
-        void removeJobTracker(string jobTracker);
         void updateWorkers(string workerUrl);
-        void updateJobTrackers(string workerUrl);
+        void updateJobTrackers(string jobTrackerUrl);
         bool canSendProcessedData(string workerUrl, int splitId);
         bool jtIsAlive();
     }
