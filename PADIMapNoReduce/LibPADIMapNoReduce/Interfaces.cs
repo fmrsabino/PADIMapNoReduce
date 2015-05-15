@@ -1,5 +1,6 @@
 ﻿using LibPADIMapNoReduce;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
 
@@ -19,8 +20,10 @@ namespace PADIMapNoReduce {
         void unfreezec();
         void checkWorkerStatus(Object state);
         void notifySplitFinish(string workerUrl,LibPADIMapNoReduce.FileSplit fileSplits);
-        void removeJobTracker(string jobTracker);
-        void updateLists(string workerUrl);
+        void updateWorkers(string workerUrl);
+        void updateJobTrackers(string jobTrackerUrl);
+        bool canSendProcessedData(string workerUrl, int splitId);
+        bool jtIsAlive();
     }
 
     public interface IWorker : IJobTracker
@@ -31,7 +34,8 @@ namespace PADIMapNoReduce {
         void sloww(int seconds);
         void freezew();
         void unfreezew();
-        bool isAlive(List<string> jobTrackers, List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork);
+        bool isAlive(ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue, List<string> jobTrackers, 
+            List<string> workers, LibPADIMapNoReduce.FileSplit[] jobQueue, ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork, string jobTrackerUrl);
     }
 
     public interface IClient

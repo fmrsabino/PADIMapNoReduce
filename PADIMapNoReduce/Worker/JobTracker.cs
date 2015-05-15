@@ -10,9 +10,11 @@ namespace Worker
         private List<string> workers = new List<string>();
         private List<string> jobTrackers = new List<string>();
         private ConcurrentQueue<LibPADIMapNoReduce.FileSplit> jobQueue = new ConcurrentQueue<LibPADIMapNoReduce.FileSplit>();
-        private Dictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork = new Dictionary<string, LibPADIMapNoReduce.FileSplit>();
+        private ConcurrentDictionary<int, LibPADIMapNoReduce.FileSplit> zombieQueue = new ConcurrentDictionary<int,LibPADIMapNoReduce.FileSplit>();
+        private ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit> onGoingWork = new ConcurrentDictionary<string, LibPADIMapNoReduce.FileSplit>();
 
-        private Timer timer;
+        private Timer timerW;
+        private Timer timerJT;
         private const long ALIVE_TIME_INTERVAL_IN_MS = 1000;
 
         public Worker(string jobTrackerUrl)
@@ -20,11 +22,12 @@ namespace Worker
             this.url = jobTrackerUrl;
             this.jobTrackerUrl = jobTrackerUrl;
             CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
-            CURRENT_STATUS_WORKER= STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
+            CURRENT_STATUS_WORKER = STATUS.WORKER_WAITING; // For STATUS command of PuppetMaster
+            LOCK_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
             jobtrackerMonitor = new object();
             workerMonitor = new object();
             mapperMonitor = new object();
-            timer = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+            timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
             workers.Add(url);
             jobTrackers.Add(jobTrackerUrl);
         }
@@ -85,7 +88,7 @@ namespace Worker
                     }
                     else //ADD
                     {
-                        onGoingWork.Add(workerUrl, job);
+                        onGoingWork.TryAdd(workerUrl, job);
                     }
                     worker.work(job);
                 }
@@ -105,18 +108,19 @@ namespace Worker
                 System.Console.WriteLine("Registered " + workerUrl);
 
                 //When a worker appears after a job has began
-                //if (workerSetup) {
-                //    PADIMapNoReduce.IWorker worker =
-                //        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl);
-                //    worker.setup(mapperCode, mapperClass, clientUrl, filePath);
+                if (workerSetup)
+                {
+                    PADIMapNoReduce.IWorker worker =
+                        (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workerUrl);
+                    worker.setup(mapperCode, mapperClass, clientUrl, filePath);
 
-                //    LibPADIMapNoReduce.FileSplit job = null;
-                //    if (jobQueue.TryDequeue(out job))
-                //    {
-                //        onGoingWork.Add(workerUrl, job);
-                //        worker.work(job);
-                //    }    
-                //}
+                    LibPADIMapNoReduce.FileSplit job = null;
+                    if (jobQueue.TryDequeue(out job))
+                    {
+                        onGoingWork.TryAdd(workerUrl, job);
+                        worker.work(job);
+                    }
+                }
                 return true;
             }
             else
@@ -126,15 +130,91 @@ namespace Worker
             }
         }
 
-        public void removeJobTracker(string jobTrackerUrl) {
-            jobTrackers.Remove(jobTrackerUrl);
+        //called on UnfreezeW
+        public void updateWorkers(string workerUrl)
+        {
+            handleFreezeJobTracker();
+            workers.Add(workerUrl);
         }
 
-        public void updateLists(string workerUrl) 
+        //called on UnfreezeC
+        public void updateJobTrackers(string workerUrl)
         {
-            //workers.Add(workerUrl);
-            //jobTrackers.Add(workerUrl);            
+            handleFreezeJobTracker();
+            jobTrackers.Add(workerUrl);
         }
+
+        public bool jtIsAlive()
+        {
+            handleFreezeJobTracker();
+            return true;
+        }
+
+        public bool canSendProcessedData(string workerUrl, int splitId)
+        {
+            handleFreezeJobTracker();
+            LibPADIMapNoReduce.FileSplit jobActual;
+            if (onGoingWork.TryGetValue(workerUrl, out jobActual))
+            {
+                if (splitId == jobActual.splitId)
+                {
+                    LibPADIMapNoReduce.FileSplit job1;
+                    zombieQueue.TryRemove(splitId, out job1);
+                    return true;
+                }
+                else
+                {
+                    //Console.WriteLine("o que split que " + workerUrl + " quer trabalhar é o " + splitId + ". O que está no registo é " + jobActual.splitId);
+                    //Console.WriteLine("nao é suposto estar aqui. só para debugging");
+                    return false;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Someone take my job during my timeout");
+                return false;
+            }
+        }
+
+        public void checkJTStatus(Object state)
+        {
+            handleFreezeWorker();
+            handleFreezeJobTracker();
+            if (jobTrackerUrl != url)
+            {
+                PADIMapNoReduce.IJobTracker jobTracker =
+                    (PADIMapNoReduce.IJobTracker)Activator.GetObject(typeof(PADIMapNoReduce.IJobTracker), jobTrackerUrl);
+                try
+                {
+                    jobTracker.jtIsAlive();
+                    //System.Console.WriteLine("PING do JT " + url + " para o JT " + jobTrackerUrl);
+                }
+                catch (System.Net.Sockets.SocketException)
+                {
+                    jobTrackers.Remove(jobTrackerUrl);
+                    if (jobTrackers[0] == url)
+                    {
+                        Console.WriteLine("I'm the new JobTracker");
+                        Console.Title = "JobTracker - " + url;
+                        jobTrackerUrl = url;
+                        timerW = new Timer(checkWorkerStatus, null, ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+                        if (onGoingWork.Count == 0)
+                        {
+                            CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING;
+
+                        }
+                        else { CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WORKING; }
+                    }
+                    else
+                    {
+                        jobTrackerUrl = jobTrackers[0];
+                        System.Console.WriteLine("The new JobTracker is " + jobTrackerUrl);
+                    }
+                }
+            }
+            timerJT.Change(ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+        }
+
 
         public void checkWorkerStatus(Object state)
         {
@@ -143,26 +223,22 @@ namespace Worker
             for (int i = 0; i < workers.Count; i++)
             {
                 PADIMapNoReduce.IWorker worker =
-                       (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i]);
+                    (PADIMapNoReduce.IWorker)Activator.GetObject(typeof(PADIMapNoReduce.IWorker), workers[i]);
+
                 try
-                {  
-                    worker.isAlive(jobTrackers, workers, jobQueue.ToArray(), onGoingWork);
-                    //System.Console.WriteLine("consegiu checkar o w " + workers[i]);
+                {
+                    worker.isAlive(zombieQueue, jobTrackers, workers, jobQueue.ToArray(), onGoingWork,jobTrackerUrl);
                 }
                 catch (System.Net.Sockets.SocketException)
                 {
                     Console.WriteLine("Couldn't reach {0}. Marking as dead!", workers[i]);
                     deadWorkers.Add(workers[i]);
 
-                    LibPADIMapNoReduce.FileSplit split;
-                    if (onGoingWork.TryGetValue(workers[i], out split))
+                    //add on zombiequeue the unfinished job
+                    LibPADIMapNoReduce.FileSplit splitNz;
+                    if (onGoingWork.TryGetValue(workers[i], out splitNz))
                     {
-                        // This means that the worker was working on the split
-                        PADIMapNoReduce.IClient client =
-                    (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
-                        client.removeFile(split.splitId);
-                        jobQueue.Enqueue(split);
-                        onGoingWork.Remove(workers[i]);
+                        zombieQueue.TryAdd(splitNz.splitId, splitNz);
                     }
                 }
             }
@@ -179,9 +255,10 @@ namespace Worker
                 }
             }
 
-            timer.Change(ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
+            timerW.Change(ALIVE_TIME_INTERVAL_IN_MS, Timeout.Infinite);
         }
 
+  
         public void notifySplitFinish(string workerUrl, LibPADIMapNoReduce.FileSplit fileSplit)
         {
             handleFreezeJobTracker(); // For handling FREEZEC from PuppetMaster
@@ -201,7 +278,7 @@ namespace Worker
                     }
                     else //ADD
                     {
-                        onGoingWork.Add(workerUrl, job);
+                        onGoingWork.TryAdd(workerUrl, job);
                     }
                     worker.work(job);
                 }
@@ -212,22 +289,64 @@ namespace Worker
             }
             else
             {
-                onGoingWork.Remove(workerUrl);
-                if (onGoingWork.Count == 0) 
+                PADIMapNoReduce.IClient client =
+                    (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
+
+                LibPADIMapNoReduce.FileSplit jobz = null;
+                IEnumerator<int> it = (IEnumerator<int>) zombieQueue.Keys.GetEnumerator();
+                bool hasFirst = it.MoveNext();
+
+                if (hasFirst && zombieQueue.TryRemove(it.Current, out jobz))
                 {
+                    client.removeFile(fileSplit.splitId);
                     try
                     {
-                        PADIMapNoReduce.IClient client =
-                            (PADIMapNoReduce.IClient)Activator.GetObject(typeof(PADIMapNoReduce.IClient), clientUrl);
-                        client.jobConcluded();
-                        System.Console.WriteLine("////////////JOB CONCLUDED/////////////////");
-                        CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
+                        //Removes the zombie worker from ongoingWork
+                        foreach (string s in onGoingWork.Keys)
+                        {
+                            LibPADIMapNoReduce.FileSplit job1 = null;
+                            onGoingWork.TryGetValue(s, out job1);
+                            if (job1.splitId == jobz.splitId)
+                            {
+                                LibPADIMapNoReduce.FileSplit deletedJob = null;
+                                onGoingWork.TryRemove(s, out deletedJob);
+                                Console.WriteLine("removi a Key = {0}", s);
+                            }
+                        }
+
+                        if (onGoingWork.ContainsKey(workerUrl)) //UPDATE
+                        {
+                            onGoingWork[workerUrl] = jobz;
+                        }
+                        else //ADD
+                        {
+                            onGoingWork.TryAdd(workerUrl, jobz);
+                        }
+                        worker.work(jobz);
                     }
-                    catch (Exception e)
+                    catch (System.Net.Sockets.SocketException)
                     {
-                        System.Console.WriteLine("EXCEPTION: " + e.Message);
-                        CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
-                        return;
+                        // The worker is probably down but it'll be removed when the job tracker checks if they are alive or not
+                    }
+                }
+                else {
+                    LibPADIMapNoReduce.FileSplit job2 = null;
+                    onGoingWork.TryRemove(workerUrl, out job2);
+
+                    if (onGoingWork.Count == 0)
+                    {
+                        try
+                        {
+                           client.jobConcluded();
+                            System.Console.WriteLine("////////////JOB CONCLUDED/////////////////");
+                            CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
+                        }
+                        catch (Exception e)
+                        {
+                            System.Console.WriteLine("EXCEPTION: " + e.Message);
+                            CURRENT_STATUS_JOBTRACKER = STATUS.JOBTRACKER_WAITING; // For STATUS command of PuppetMaster
+                            return;
+                        }
                     }
                 }
             }
