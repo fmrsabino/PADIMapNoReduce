@@ -28,6 +28,7 @@ namespace PuppetMaster
             this.Text = "Puppet Master running on: " + puppetMasterURL;
 
             puppetMasters = new List<string>();
+	    puppetMasters.add(puppetMasterURL);
             commands = new List<string>();
 
             workerExecutablePath = _workerExecutablePath;
@@ -172,6 +173,7 @@ namespace PuppetMaster
                 {
                     MessageBox.Show("workerId: " + workerId + "\nPuppetMasterURL: " + PuppetMasterURL + "\nServiceURL: " + ServiceURL + "\nEntryURL: " + EntryURL + "\nFailed to start! A worker with the same id may already exist or something weird may be happening with Windows - protip: Linux");
                 }
+		puppetMasters.add(PuppetMasterURL);
 
             }
             catch (Exception e)
@@ -225,9 +227,11 @@ namespace PuppetMaster
 
         private void executeSTATUSCommand(MatchCollection matches)
         {
-            PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
-    typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
-            pm.printStatus();
+		foreach(String puppetMaster in puppetMasters){
+            		PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+    typeof(PADIMapNoReduce.IPuppetMaster), puppetMaster);
+            		pm.printStatus();
+		}
         }
 
         private void executeSLOWWCommand(MatchCollection matches)
@@ -237,9 +241,11 @@ namespace PuppetMaster
             {
                 int id = int.Parse(matches[0].Groups[1].Value);
                 int seconds = int.Parse(matches[0].Groups[2].Value);
-                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
-typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
-                pm.sloww(id, seconds);
+		foreach(String puppetMaster in puppetMasters){
+                	PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMaster);
+                	pm.sloww(id, seconds);
+		}
             }
             catch (Exception e)
             {
@@ -253,10 +259,12 @@ typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
 
             try
             {
-                int id = int.Parse(matches[0].Groups[1].Value);
-                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
-typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
-                pm.freezew(id);
+                int id = int.Parse(matches[0].Groups[1].Value); 
+		foreach(String puppetMaster in puppetMasters){
+			PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMaster);
+                	pm.freezew(id);
+		}
             }
             catch (Exception e)
             {
@@ -272,9 +280,11 @@ typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
             {
                 int id = int.Parse(matches[0].Groups[1].Value);
 
-                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
-typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
-                pm.unfreezew(id);
+		foreach(String puppetMaster in puppetMasters){
+                	PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMaster);
+                	pm.unfreezew(id);
+		}
             }
             catch (Exception e)
             {
@@ -290,9 +300,11 @@ typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
             {
                 int id = int.Parse(matches[0].Groups[1].Value);
 
-                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
-typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
-                pm.freezec(id);
+		foreach(String puppetMaster in puppetMasters){
+                	PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMaster);
+                	pm.freezec(id);
+		}
             }
             catch (Exception e)
             {
@@ -308,9 +320,11 @@ typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
             {
                 int id = int.Parse(matches[0].Groups[1].Value);
 
-                PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
-typeof(PADIMapNoReduce.IPuppetMaster), puppetMasterURL);
-                pm.unfreezec(id);
+		foreach(String puppetMaster in puppetMasters){
+                	PADIMapNoReduce.IPuppetMaster pm = (PADIMapNoReduce.IPuppetMaster)Activator.GetObject(
+typeof(PADIMapNoReduce.IPuppetMaster), puppetMaster);
+                	pm.unfreezec(id);
+		}
             }
             catch (Exception e)
             {
