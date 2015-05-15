@@ -28,7 +28,7 @@ namespace PuppetMaster
             this.Text = "Puppet Master running on: " + puppetMasterURL;
 
             puppetMasters = new List<string>();
-	    puppetMasters.add(puppetMasterURL);
+	    puppetMasters.Add(puppetMasterURL);
             commands = new List<string>();
 
             workerExecutablePath = _workerExecutablePath;
@@ -173,7 +173,10 @@ namespace PuppetMaster
                 {
                     MessageBox.Show("workerId: " + workerId + "\nPuppetMasterURL: " + PuppetMasterURL + "\nServiceURL: " + ServiceURL + "\nEntryURL: " + EntryURL + "\nFailed to start! A worker with the same id may already exist or something weird may be happening with Windows - protip: Linux");
                 }
-		puppetMasters.add(PuppetMasterURL);
+                if (!puppetMasters.Contains(PuppetMasterURL))
+                {
+                    puppetMasters.Add(PuppetMasterURL);
+                }
 
             }
             catch (Exception e)
